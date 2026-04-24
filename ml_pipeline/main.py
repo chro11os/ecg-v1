@@ -14,7 +14,7 @@ def train_model():
     print(f"Executing PyTorch math on: {device}")
 
     # 2. Data Pipeline (with Strict Academic Splitting)
-    absolute_target = '/Users/chrollos/Documents/projects/ecg-v1/physionet_data_aws/p00/*/*.dat'
+    absolute_target = './physionet_data_aws/p00/*/*.dat'
     patient_files = [f.replace('.dat', '') for f in glob.glob(absolute_target)]
 
     if len(patient_files) == 0:
@@ -97,8 +97,16 @@ def train_model():
                 val_correct += (val_predicted == val_y).sum().item()
 
         true_accuracy = (val_correct / val_total) * 100.0
-        print(f"--> VALIDATION SCORE | Blind Loss: {val_loss / len(test_loader):.4f} | Blind Accuracy: {true_accuracy:.2f}%")
+        print(
+            f"--> VALIDATION SCORE | Blind Loss: {val_loss / len(test_loader):.4f} | Blind Accuracy: {true_accuracy:.2f}%")
         print("-" * int(50.0))
+
+        # 5. Model Serialization (The Final Export)
+        # Notice this is completely un-indented from the epoch loop
+    print("--- INITIATING WEIGHT EXPORT ---")
+    save_path = "afib_cnn_lstm_v1.pt"
+    torch.save(model.state_dict(), save_path)
+    print(f"Success: Neural network weights strictly locked and saved to {save_path}")
 
 if __name__ == "__main__":
     train_model()

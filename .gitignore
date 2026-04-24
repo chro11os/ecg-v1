@@ -1,2 +1,4 @@
-/physionet_data_aws/
+/ml_pipeline/physionet_data_aws/
 /venv/
+/__pycache__/
+/fast_api_backend/afib_cnn_lstm_v1.pt/
