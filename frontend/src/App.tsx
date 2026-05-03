@@ -1,12 +1,17 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import MenuCard from "./components/MenuCard";
+import TitleCard from "./components/TitleCard";
 
 function App() {
     return (
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+            <div className=" p-6 ">
+                <TitleCard />
+            </div>
+            <div className=" p-6 ">
+                <MenuCard />
+            </div>
+        </div>
     )
 }
-export default App
+
+export default App;
