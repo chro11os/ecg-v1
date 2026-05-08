@@ -10,7 +10,7 @@ interface DiagnosisData {
   hardware: string;
   responseTime: number;
 }
-   {/* INPUT DATA */}
+   //* INPUT DATA *
 const diagnosisData: DiagnosisData = {
   severity: 2,
   confidence: 48,
