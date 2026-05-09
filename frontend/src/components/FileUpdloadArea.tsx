@@ -1,31 +1,42 @@
-import React from 'react';
-import { useDropzone, FileWithPath } from 'react-dropzone';
+import { useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 
-interface FileUploadAreaProps {
+const FileUploadArea = () => {
+	const onDrop = useCallback((acceptedFiles: File[]) => {
+		console.log('Accepted files:', acceptedFiles);
+	}, []);
 
-}
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop,
+		accept: {
+			'image/*': [],
+			'application/pdf': []
+		}
+	});
 
-function FileUploadArea(props: FileUploadAreaProps) {
-    const { acceptedFiles, getRootProps, getInputProps } = useDropzone();
+	return (
+		<div className="mt-6">
+			<div
+				{...getRootProps()}
+				className={`
+          cursor-pointer border-2 border-dashed p-12 text-center transition-colors
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}
+          rounded-xl
+        `}
+			>
+				<input {...getInputProps()} />
 
-    const files = acceptedFiles.map((file: FileWithPath) => (
-        <li key={file.path}>
-            {file.path} - {file.size} bytes
-        </li>
-    ));
-
-    return (
-        <section className="container">
-            <div {...getRootProps({ className: 'dropzone' })}>
-                <input {...getInputProps()} />
-                <p>Drag n drop some files here, or click to select files</p>
-            </div>
-            <aside>
-                <h4>Files</h4>
-                <ul>{files}</ul>
-            </aside>
-        </section>
-    );
-}
+				<div className="flex flex-col items-center gap-2">
+					<p className="text-sm font-medium text-gray-700">
+						{isDragActive ? "Drop files here" : "Drag and drop files here, or click to select"}
+					</p>
+					<p className="text-xs text-gray-500">
+						Supports images and PDFs
+					</p>
+				</div>
+			</div>
+		</div>
+	);
+};
 
 export default FileUploadArea;
