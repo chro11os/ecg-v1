@@ -1,9 +1,13 @@
-import FileUploadArea from "./components/FileUpdloadArea";
+import DiagnosisDashboard from "./components/DiagnosisDashboard";
+import FileUploadArea from "./components/FileUploadArea";
 
 function App() {
-    return (
-        <FileUploadArea />
-    )
+	return (
+		<div>
+			<FileUploadArea />
+			<DiagnosisDashboard />
+		</div>
+	)
 }
 
 export default App;
