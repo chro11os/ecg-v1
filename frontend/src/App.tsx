@@ -1,5 +1,5 @@
 import DiagnosisDashboard from "./components/DiagnosisDashboard";
-import FileUploadArea from "./components/FileUpdloadArea";
+import FileUploadArea from "./components/FileUploadArea";
 
 function App() {
 	return (
