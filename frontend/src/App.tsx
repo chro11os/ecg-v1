@@ -2,12 +2,13 @@ import DiagnosisDashboard from "./components/DiagnosisDashboard";
 import FileUploadArea from "./components/FileUploadArea";
 
 function App() {
-	return (
-		<div>
-			<FileUploadArea />
-			<DiagnosisDashboard />
-		</div>
-	)
+  return (
+    <div className="">
+
+      <FileUploadArea />
+      <DiagnosisDashboard />
+    </div>
+  )
 }
 
 export default App;
