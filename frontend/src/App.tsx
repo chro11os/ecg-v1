@@ -1,12 +1,9 @@
-import DiagnosisDashboard from "./components/DiagnosisDashboard";
-import FileUploadArea from "./components/FileUploadArea";
+import BentoGrid from "./layout/BentoGrid";
 
 function App() {
   return (
-    <div className="">
-
-      <FileUploadArea />
-      <DiagnosisDashboard />
+    <div className="main">
+      <BentoGrid />
     </div>
   )
 }
