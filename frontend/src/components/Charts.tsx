@@ -162,8 +162,8 @@ export default function ECGViewer({
           <button
             onClick={() => setShowAnnot(a => !a)}
             className={`px-2 py-1 text-xs rounded border transition-colors ${showAnnot
-                ? "bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300"
-                : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900"
+              ? "bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300"
+              : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900"
               }`}
           >AF overlay</button>
         </div>
