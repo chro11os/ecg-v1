@@ -1,4 +1,3 @@
-import React from 'react';
 import DiagnosisDashboard from '../components/DiagnosisDashboard';
 import FileUploadArea from '../components/FileUploadArea';
 
