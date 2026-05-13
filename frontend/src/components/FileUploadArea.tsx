@@ -1,42 +1,45 @@
 import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 
-const FileUploadArea = () => {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    console.log('Accepted files:', acceptedFiles);
-  }, []);
+interface Props {
+    onDataLoaded: (data: number[]) => void;
+    onError: (msg: string) => void;
+}
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': [],
-      'application/pdf': []
-    }
-  });
+const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        const file = acceptedFiles[0];
+        const reader = new FileReader();
 
-  return (
-    <div className="mt-6">
-      <div
-        {...getRootProps()}
-        className={`
-          cursor-pointer border-2 border-dashed p-12 text-center transition-colors
-          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}
-          rounded-xl
-        `}
-      >
-        <input {...getInputProps()} />
+        reader.onload = () => {
+            try {
+                const json = JSON.parse(reader.result as string);
+                if (Array.isArray(json.signal) && json.signal.length === 2500) {
+                    onDataLoaded(json.signal);
+                } else {
+                    onError("Invalid data: File must contain exactly 2500 ECG samples.");
+                }
+            } catch (e) {
+                onError("Failed to parse JSON file.");
+            }
+        };
+        reader.readAsText(file);
+    }, [onDataLoaded, onError]);
 
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm font-medium text-gray-700">
-            {isDragActive ? "Drop files here" : "Drag and drop files here, or click to select"}
-          </p>
-          <p className="text-xs text-gray-500">
-            Supports images and PDFs
-          </p>
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: { 'application/json': ['.json'], 'text/csv': ['.csv'] },
+        multiple: false
+    });
+
+    return (
+        <div {...getRootProps()} className={`border-2 border-dashed p-10 rounded-3xl transition-all ${isDragActive ? 'border-cyan-400 bg-cyan-400/10' : 'border-white/10 bg-white/5'}`}>
+            <input {...getInputProps()} />
+            <p className="text-center text-slate-300 font-mono text-sm">
+                {isDragActive ? "DROP ECG DATA" : "DRAG & DROP 2,500 SAMPLES (.JSON)"}
+            </p>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default FileUploadArea;
