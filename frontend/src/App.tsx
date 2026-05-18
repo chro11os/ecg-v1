@@ -7,13 +7,13 @@ export default function App() {
     const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const handleAnalysis = async (signal: number[]) => {
+    const handleAnalysis = async (incomingSignal: number[]) => {
         setLoading(true);
         try {
             const response = await fetch("http://localhost:8000/predict", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ signal }),
+                body: JSON.stringify({ signal: incomingSignal }),
             });
 
             const result = await response.json();
@@ -24,6 +24,7 @@ export default function App() {
                 burden: Math.round(result.confidence * 85.0),
                 hardware: result.hardware_used,
                 responseTime: 124.0,
+                rawSignal: incomingSignal,
             });
         } catch (error) {
             console.error("Inference Error:", error);
@@ -33,10 +34,9 @@ export default function App() {
     };
 
     return (
-        <div className="main bg-slate-950 min-h-screen flex items-center justify-center p-6">
+        <div className="main bg-slate-950 min-h-screen flex flex-col items-center justify-center p-6">
             {!diagnosis ? (
                 <div className="w-full max-w-xl">
-                    {/* Fix TS2739: Provide both onDataLoaded and onError */}
                     <FileUploadArea
                         onDataLoaded={handleAnalysis}
                         onError={(msg) => alert(msg)}
@@ -44,10 +44,14 @@ export default function App() {
                     {loading && <p className="text-cyan-400 mt-4 text-center animate-pulse">ANALYZING SIGNAL...</p>}
                 </div>
             ) : (
-                <DiagnosisDashboard
-                    data={diagnosis}
-                    onReset={() => setDiagnosis(null)}
-                />
+                <div className="w-full max-w-6xl space-y-6">
+                    <DiagnosisDashboard
+                        data={diagnosis}
+                        onReset={() => {
+                            setDiagnosis(null);
+                        }}
+                    />
+                </div>
             )}
         </div>
     );

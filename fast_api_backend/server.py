@@ -6,6 +6,8 @@ from numpy import dtype
 from pydantic import BaseModel
 from typing import List
 
+from starlette.middleware.cors import CORSMiddleware
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from model import AFCNN_LSTM
 
@@ -30,7 +32,7 @@ async def predict_ecg(payload: ECGPayload):
         raise HTTPException(status_code=400, detail="Payload must be exactly 2500 samples")
 
     try:
-        x = torch.tesor(payload.signal, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
+        x = torch.tensor(payload.signal, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
 
         with torch.no_grad():
             logits = model(x)
@@ -43,3 +45,11 @@ async def predict_ecg(payload: ECGPayload):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

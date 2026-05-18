@@ -7,4 +7,5 @@ export interface DiagnosisData {
     burden: number;
     hardware: string;
     responseTime: number;
+    rawSignal: number[];
 }
