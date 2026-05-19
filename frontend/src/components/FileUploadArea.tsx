@@ -34,7 +34,7 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
                     setPreparedSignal(null);
                     onError("Invalid data structure: File must contain exactly 2,500 ECG samples under the 'signal' key.");
                 }
-            } catch (e) {
+            } catch {
                 setPreparedSignal(null);
                 onError("Failed to parse JSON file. Ensure it is valid JSON formatting.");
             }
@@ -42,7 +42,7 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
 
         try {
             reader.readAsText(file);
-        } catch (readError) {
+        } catch {
             setPreparedSignal(null);
             onError("Failed to read the contents of the file.");
         }
@@ -82,7 +82,7 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
                     onClick={() => onDataLoaded(preparedSignal)}
                     className="w-full py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-bold rounded-2xl transition-colors tracking-wider animate-in fade-in slide-in-from-bottom-2 duration-300"
                 >
-                    [ RUN INFERENCE ON MPS ]
+                    Process
                 </button>
             )}
         </div>

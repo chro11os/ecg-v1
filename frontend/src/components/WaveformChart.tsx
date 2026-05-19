@@ -10,6 +10,7 @@ import {
     Tooltip,
     Legend,
 } from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
 
 ChartJS.register(
     CategoryScale, 
@@ -18,7 +19,8 @@ ChartJS.register(
     LineElement, 
     Title, 
     Tooltip, 
-    Legend
+    Legend,
+    zoomPlugin
 );
 
 interface Props {
@@ -42,8 +44,13 @@ const WaveformChart: React.FC<Props> = ({ signal }) => {
 
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Live ECG Signal Strip</h3>
-            <div className="h-64">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">Live ECG Signal Strip</h3>
+                <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">
+                    Wheel to Zoom • Drag to Pan
+                </span>
+            </div>
+            <div className="h-64 cursor-crosshair">
                 <Line
                     data={data}
                     options={{
@@ -53,6 +60,21 @@ const WaveformChart: React.FC<Props> = ({ signal }) => {
                             legend: {
                                 display: false,
                             },
+                            zoom: {
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x',
+                                },
+                                zoom: {
+                                    wheel: {
+                                        enabled: true,
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'x',
+                                }
+                            }
                         },
                         scales: {
                             x: { 

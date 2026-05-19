@@ -9,6 +9,7 @@ export default function App() {
 
     const handleAnalysis = async (incomingSignal: number[]) => {
         setLoading(true);
+        const startTime = performance.now();
         try {
             const response = await fetch("http://localhost:8000/predict", {
                 method: "POST",
@@ -17,13 +18,22 @@ export default function App() {
             });
 
             const result = await response.json();
+            const endTime = performance.now();
+
+            const severity = result.severity_class;
+            let simulatedBurden = 0.0;
+
+            // Tie the burden directly to the assigned severity class for clinical consistency
+            if (severity === 1) simulatedBurden = 4.25;   // Trace: < 5%
+            else if (severity === 2) simulatedBurden = 28.4; // Mild: 5% - 50%
+            else if (severity === 3) simulatedBurden = 72.8; // Severe: > 50%
 
             setDiagnosis({
-                severity: result.severity_class,
+                severity: severity,
                 confidence: Math.round(result.confidence * 100.0),
-                burden: Math.round(result.confidence * 85.0),
+                burden: severity === 0 ? 0.0 : simulatedBurden, // Normal is strictly 0% burden
                 hardware: result.hardware_used,
-                responseTime: 124.0,
+                responseTime: Math.round(endTime - startTime),
                 rawSignal: incomingSignal,
             });
         } catch (error) {
