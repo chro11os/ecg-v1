@@ -9,7 +9,10 @@
     --color-brand-surface: #ffffff;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 body {
     font-family: "Barlow Condensed";
-    background-color: #fafafd;
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50;
+    transition: background-color 300ms, color 300ms;
 }

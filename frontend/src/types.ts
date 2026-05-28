@@ -8,4 +8,7 @@ export interface DiagnosisData {
     hardware: string;
     responseTime: number;
     rawSignal: number[];
+    rPeaks?: number[];
+    rrVariance?: number;
+    rmssd?: number;
 }

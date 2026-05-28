@@ -2,6 +2,15 @@ import DiagnosisDashboard from '../components/DiagnosisDashboard';
 import FileUploadArea from '../components/FileUploadArea';
 
 const BentoGrid = () => {
+  const dummyData = {
+    severity: 0 as any,
+    confidence: 0,
+    burden: 0,
+    hardware: "cpu",
+    responseTime: 0,
+    rawSignal: []
+  };
+
   return (
     // 1. Set container to full viewport width/height and hide overflow
     <div className="h-screen w-screen bg-zinc-950 overflow-hidden p-2">
@@ -12,7 +21,7 @@ const BentoGrid = () => {
         {/* 1. Primary Dashboard Section (Left 2/3) */}
         <div className="md:col-span-2 md:row-span-10 bg-[#0f172a] rounded-xl border border-white/5 overflow-hidden shadow-2xl flex flex-col">
           <div className="flex-1 overflow-auto p-4">
-            <DiagnosisDashboard />
+            <DiagnosisDashboard data={dummyData} darkMode={true} onReset={() => {}} />
           </div>
         </div>
 
@@ -36,7 +45,7 @@ const BentoGrid = () => {
 
         {/* 4. Bottom Right Sliver - File Actions (1/3 width, 20% height) */}
         <div className="md:col-span-1 md:row-span-2 bg-white rounded-xl border border-zinc-200 shadow-sm p-4 flex flex-col justify-center">
-          <FileUploadArea />
+          <FileUploadArea onDataLoaded={() => {}} onError={() => {}} />
         </div>
 
       </div>
