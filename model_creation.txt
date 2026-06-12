@@ -1,0 +1,68 @@
+1. Data & Infrastructure Setup
+
+    [ ] Fix random seeds across Python, NumPy, and PyTorch for reproducibility.
+
+    [ ] Partition the filtered Icentia11k dataset into the final 70% training, 15% validation, and 15% testing splits.
+
+    [ ] Save the split index layouts to disk to ensure identical batch loading across all models.
+
+    [ ] Verify PyTorch GPU acceleration with the AMD ROCm backend on your Linux workstation.
+
+2. Standalone 1D CNN Implementation
+
+    [ ] Code the 1D Convolutional blocks and pooling layers leading directly to a dense output layer.
+
+    [ ] Train the model on the master 70% training split using the Adam optimizer and categorical cross-entropy loss.
+
+    [ ] Save the trained weights to baseline_cnn.pth.
+
+3. Standalone LSTM / Vanilla RNN Implementation
+
+    [ ] Code a network that passes raw 1D signal arrays directly into standard recurrent/LSTM layers.
+
+    [ ] Train the model on the master training split using a batch size of 64 and a learning rate of 0.001.
+
+    [ ] Save the trained weights to baseline_lstm.pth.
+
+4. 1D CNN-GRU Implementation
+
+    [ ] Construct a network pairing the standard 1D CNN spatial front-end with Gated Recurrent Unit (GRU) layers.
+
+    [ ] Train the model on the master training split while tracking training time per epoch.
+
+    [ ] Save the trained weights to hybrid_gru.pth.
+
+5. Bidirectional LSTM (BiLSTM) Implementation
+
+    [ ] Implement a hybrid network wrapping the sequential LSTM layers in a bidirectional structure.
+
+    [ ] Train the model on the master training split while monitoring VRAM allocation on the RX 6600.
+
+    [ ] Save the trained weights to hybrid_bilstm.pth.
+
+6. Lightweight Transformer Implementation
+
+    [ ] Code a sequence-to-sequence network utilizing Multi-Head Self-Attention layers and positional encodings.
+
+    [ ] Train the model on the master training split and log resource utility.
+
+    [ ] Save the trained weights to baseline_transformer.pth.
+
+7. Metrics Evaluation & Comparison
+
+    [ ] Load the unseen 15% testing split for final model verification.
+
+    [ ] Compute overall Accuracy, Macro Precision, Macro Recall, and Macro F1-Score for each model weights file using Scikit-learn.
+
+    [ ] Generate and plot class-specific ROC-AUC curves for all five architectures.
+
+    [ ] Export the Confusion Matrix data for each baseline to check specific misclassification patterns.
+
+    [ ] Populate the master benchmarking table comparing all model metrics against your thesis 1D CNN-LSTM network.
+
+Metric Benchmarking Strategy
+Model Architecture	Accuracy	Macro Precision	Macro Recall	Macro F1-Score	ROC-AUC
+Standalone 1D CNN	Baseline	Baseline	Baseline	Baseline	Baseline
+Standalone LSTM	Baseline	Baseline	Baseline	Baseline	Baseline
+1D CNN-GRU	Baseline	Baseline	Baseline	Baseline	Baseline
+Hybrid 1D CNN-LSTM (Ours)	Highest	Optimized	Highest
