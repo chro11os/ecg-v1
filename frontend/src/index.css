@@ -2,17 +2,23 @@
 @import "tailwindcss";
 
 @theme {
-    --color-brand-dark: #122056;
-    --color-brand-accent: #5b65dc;
-    --color-brand-secondary: #eeeffd;
-    --color-brand-bg: #fafafd;
-    --color-brand-surface: #ffffff;
-}
+    --color-bg-canvas: #F8F9FA;
+    --color-text-primary: #121417;
+    --color-card-bg: #FFFFFF;
+    --color-border-subtle: #E5E7EB;
 
-@variant dark (&:where(.dark, .dark *));
+    --color-brand-primary: #0066CC;
+    --color-brand-secondary: #4A5568;
+
+    --color-status-critical: #DC2626;
+    --color-status-warning: #D97706;
+    --color-status-healthy: #16A34A;
+    --color-status-info: #2563EB;
+}
 
 body {
     font-family: "Barlow Condensed";
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50;
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
     transition: background-color 300ms, color 300ms;
 }

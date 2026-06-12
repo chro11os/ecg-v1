@@ -21,7 +21,7 @@ const BentoGrid = () => {
         {/* 1. Primary Dashboard Section (Left 2/3) */}
         <div className="md:col-span-2 md:row-span-10 bg-[#0f172a] rounded-xl border border-white/5 overflow-hidden shadow-2xl flex flex-col">
           <div className="flex-1 overflow-auto p-4">
-            <DiagnosisDashboard data={dummyData} darkMode={true} onReset={() => {}} />
+            <DiagnosisDashboard data={dummyData} onReset={() => {}} />
           </div>
         </div>
 

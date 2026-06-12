@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { DiagnosisData, SeverityLevel } from "./types";
 import DiagnosisDashboard from "./components/DiagnosisDashboard";
 import FileUploadArea from "./components/FileUploadArea";
@@ -163,21 +163,12 @@ const mockPatientRecords: PatientRecord[] = [
 export default function App() {
     const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
     const [loading, setLoading] = useState(false);
-    const [darkMode, setDarkMode] = useState(true);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [historyOpen, setHistoryOpen] = useState(false);
 
     // Patients Sidebar States
     const [sidebarTab, setSidebarTab] = useState<"PATIENTS" | "SCANS">("PATIENTS");
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [darkMode]);
 
     const handleAnalysis = async (incomingSignal: number[], fileName: string) => {
         setLoading(true);
@@ -263,47 +254,39 @@ export default function App() {
     };
 
     return (
-        <div className="main bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-300 relative overflow-x-hidden">
-            {/* Top-Right and Top-Left Controls Dock */}
+        <div className="main bg-bg-canvas text-text-primary min-h-screen flex flex-col items-center justify-center p-6 relative overflow-x-hidden">
+            {/* Top-Left Control Dock */}
             <button
                 onClick={() => setHistoryOpen(!historyOpen)}
-                className="fixed top-6 left-6 px-4 py-2.5 rounded-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm z-50 hover:bg-slate-50 dark:hover:bg-slate-700/80 hover:border-cyan-400 dark:hover:border-cyan-400/50 hover:shadow-[0_4px_12px_rgba(34,211,238,0.08)] transition-all cursor-pointer font-mono font-bold text-xs text-slate-700 dark:text-slate-300 active:scale-95 animate-in fade-in duration-300"
+                className="fixed top-6 left-6 px-4 py-2.5 rounded-none bg-card-bg border border-border-subtle shadow-sm z-50 hover:bg-bg-canvas hover:border-brand-primary hover:shadow-[0_4px_12px_rgba(0,102,204,0.08)] transition-all cursor-pointer font-mono font-bold text-xs text-text-primary active:scale-95 animate-in fade-in duration-300"
             >
                 ECG REGISTRY
             </button>
 
-            <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="fixed top-6 right-6 px-4 py-2.5 rounded-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm z-50 hover:bg-slate-50 dark:hover:bg-slate-700/80 hover:border-cyan-400 dark:hover:border-cyan-400/50 hover:shadow-[0_4px_12px_rgba(34,211,238,0.08)] transition-all cursor-pointer font-mono font-bold text-xs text-slate-700 dark:text-slate-300 active:scale-95 animate-in fade-in duration-300"
-                aria-label="Toggle Theme"
-            >
-                THEME: {darkMode ? "LIGHT" : "DARK"}
-            </button>
-
             {/* Sliding Drawer for Recent Scans and Patients Directory */}
             <div 
-                className={`fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
+                className={`fixed inset-y-0 left-0 w-80 bg-card-bg border-r border-border-subtle p-6 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
                     historyOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
                 <div className="flex justify-between items-center mb-4 mt-16 pb-2">
-                    <h2 className="text-lg font-bold font-mono tracking-wide text-slate-900 dark:text-white">ECG REGISTRY</h2>
+                    <h2 className="text-lg font-bold font-mono tracking-wide text-text-primary">ECG REGISTRY</h2>
                     <button 
                         onClick={() => setHistoryOpen(false)}
-                        className="text-[10px] font-mono font-bold px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-none cursor-pointer active:scale-95"
+                        className="text-[10px] font-mono font-bold px-2 py-1 bg-bg-canvas hover:bg-border-subtle text-brand-secondary border border-border-subtle rounded-none cursor-pointer active:scale-95"
                     >
                         CLOSE
                     </button>
                 </div>
 
                 {/* Multi-Panel Tabs */}
-                <div className="flex border-b border-slate-200 dark:border-slate-800 mb-4">
+                <div className="flex border-b border-border-subtle mb-4">
                     <button
                         onClick={() => setSidebarTab("PATIENTS")}
                         className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
                             sidebarTab === "PATIENTS"
-                                ? "border-cyan-500 text-cyan-600 dark:text-cyan-400"
-                                : "border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600"
+                                ? "border-brand-primary text-brand-primary font-black"
+                                : "border-transparent text-brand-secondary hover:text-text-primary"
                         }`}
                     >
                         PATIENTS
@@ -312,8 +295,8 @@ export default function App() {
                         onClick={() => setSidebarTab("SCANS")}
                         className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
                             sidebarTab === "SCANS"
-                                ? "border-cyan-500 text-cyan-600 dark:text-cyan-400"
-                                : "border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600"
+                                ? "border-brand-primary text-brand-primary font-black"
+                                : "border-transparent text-brand-secondary hover:text-text-primary"
                         }`}
                     >
                         SCANS ({history.length})
@@ -328,43 +311,43 @@ export default function App() {
                                 return (
                                     <div 
                                         key={patient.patientId} 
-                                        className="border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-950/20"
+                                        className="border border-border-subtle p-3 bg-bg-canvas"
                                     >
                                         <div 
                                             onClick={() => setSelectedPatientId(isExpanded ? null : patient.patientId)}
-                                            className="flex justify-between items-center cursor-pointer hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors"
+                                            className="flex justify-between items-center cursor-pointer hover:text-brand-primary transition-colors"
                                         >
                                             <div>
-                                                <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">Patient: {patient.patientId}</p>
-                                                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{patient.gender.toUpperCase()}, {patient.age} Y/O</p>
+                                                <p className="text-xs font-mono font-bold text-text-primary">Patient: {patient.patientId}</p>
+                                                <p className="text-[9px] text-brand-secondary font-mono mt-0.5">{patient.gender.toUpperCase()}, {patient.age} Y/O</p>
                                             </div>
                                             <span className="text-xs font-mono">{isExpanded ? "▲" : "▼"}</span>
                                         </div>
 
                                         {isExpanded && (
-                                            <div className="mt-3 border-t border-slate-100 dark:border-slate-800/80 pt-2 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="mt-3 border-t border-border-subtle pt-2 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                                                 {patient.scans.map((scan) => (
                                                     <div 
                                                         key={scan.scanId}
                                                         onClick={() => loadPatientScan(scan)}
-                                                        className="p-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-cyan-500/50 dark:hover:border-cyan-400/50 cursor-pointer transition-all duration-150 hover:translate-x-1"
+                                                        className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary/50 cursor-pointer transition-all duration-150 hover:translate-x-1"
                                                     >
                                                         <div className="flex justify-between items-center text-[10px] font-mono">
-                                                            <span className="font-bold text-slate-600 dark:text-slate-400">{scan.scanId}</span>
-                                                            <span className="text-slate-400">{scan.date}</span>
+                                                            <span className="font-bold text-brand-secondary">{scan.scanId}</span>
+                                                            <span className="text-brand-secondary/60">{scan.date}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center mt-2">
                                                             <span className={`px-1.5 py-0.2 text-[9px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                                                scan.severity === 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                                                                scan.severity === 1 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
-                                                                scan.severity === 2 ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20' :
-                                                                'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                                                                scan.severity === 0 ? 'bg-status-healthy/10 text-status-healthy border border-status-healthy/20' :
+                                                                scan.severity === 1 ? 'bg-status-info/10 text-status-info border border-status-info/20' :
+                                                                scan.severity === 2 ? 'bg-status-warning/10 text-status-warning border border-status-warning/20' :
+                                                                'bg-status-critical/10 text-status-critical border border-status-critical/20'
                                                             }`}>
                                                                 {scan.severity === 0 ? 'Normal' :
                                                                  scan.severity === 1 ? 'Trace' :
                                                                  scan.severity === 2 ? 'Mild' : 'Severe'}
                                                             </span>
-                                                            <span className="text-[9px] font-mono text-slate-400">{scan.confidence}% CONF</span>
+                                                            <span className="text-[9px] font-mono text-brand-secondary/80">{scan.confidence}% CONF</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -376,7 +359,7 @@ export default function App() {
                         </div>
                     ) : (
                         history.length === 0 ? (
-                            <p className="text-xs font-mono text-slate-400 text-center py-10">
+                            <p className="text-xs font-mono text-brand-secondary text-center py-10">
                                 NO RECENT SCANS
                             </p>
                         ) : (
@@ -384,29 +367,29 @@ export default function App() {
                                 <div
                                     key={item.id}
                                     onClick={() => loadHistoryItem(item)}
-                                    className="p-4 rounded-none bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800/80 hover:border-cyan-500/50 dark:hover:border-cyan-400/50 hover:bg-white dark:hover:bg-slate-900 cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-xs hover:shadow-[0_4px_16px_rgba(34,211,238,0.06)]"
+                                    className="p-4 rounded-none bg-bg-canvas border border-border-subtle hover:border-brand-primary/50 hover:bg-card-bg cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-xs hover:shadow-[0_4px_16px_rgba(0,102,204,0.06)]"
                                 >
                                     <div className="flex justify-between items-start gap-2 mb-2">
-                                        <span className="text-xs font-mono font-bold truncate max-w-40 text-slate-800 dark:text-slate-200">
+                                        <span className="text-xs font-mono font-bold truncate max-w-40 text-text-primary">
                                             {item.fileName}
                                         </span>
-                                        <span className="text-[9px] font-mono text-slate-400 shrink-0 mt-0.5">
+                                        <span className="text-[9px] font-mono text-brand-secondary/60 shrink-0 mt-0.5">
                                             {item.timestamp}
                                         </span>
                                     </div>
 
                                     <div className="flex justify-between items-center mt-3">
                                         <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                            item.severity === 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                                            item.severity === 1 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
-                                            item.severity === 2 ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20' :
-                                            'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                                            item.severity === 0 ? 'bg-status-healthy/10 text-status-healthy border border-status-healthy/20' :
+                                            item.severity === 1 ? 'bg-status-info/10 text-status-info border border-status-info/20' :
+                                            item.severity === 2 ? 'bg-status-warning/10 text-status-warning border border-status-warning/20' :
+                                            'bg-status-critical/10 text-status-critical border border-status-critical/20'
                                         }`}>
                                             {item.severity === 0 ? 'Normal' :
                                              item.severity === 1 ? 'Trace' :
                                              item.severity === 2 ? 'Mild' : 'Severe'}
                                         </span>
-                                        <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
+                                        <span className="text-[9px] font-mono text-brand-secondary shrink-0">
                                             {item.responseTime}MS ON {item.hardware.toUpperCase()}
                                         </span>
                                     </div>
@@ -421,7 +404,7 @@ export default function App() {
             {historyOpen && (
                 <div 
                     onClick={() => setHistoryOpen(false)}
-                    className="fixed inset-0 bg-slate-950/20 dark:bg-slate-950/50 backdrop-blur-xs z-30 transition-all duration-300"
+                    className="fixed inset-0 bg-text-primary/10 backdrop-blur-xs z-30 transition-all duration-300"
                 />
             )}
 
@@ -432,7 +415,7 @@ export default function App() {
                         onError={(msg) => alert(msg)}
                     />
                     {loading && (
-                        <p className="text-cyan-600 dark:text-cyan-400 mt-6 text-center animate-pulse font-mono tracking-widest text-sm">
+                        <p className="text-brand-primary mt-6 text-center animate-pulse font-mono tracking-widest text-sm">
                             ANALYZING SIGNAL...
                         </p>
                     )}
@@ -441,7 +424,6 @@ export default function App() {
                 <div className="w-full max-w-6xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <DiagnosisDashboard
                         data={diagnosis}
-                        darkMode={darkMode}
                         onReset={() => {
                             setDiagnosis(null);
                         }}

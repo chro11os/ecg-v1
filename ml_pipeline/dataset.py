@@ -2,6 +2,28 @@ import torch
 from torch.utils.data import Dataset
 import wfdb
 import numpy as np
+import scipy.signal
+
+def bandpass_filter(data, lowcut=0.5, highcut=45.0, fs=250.0, order=4):
+    """
+    Applies a Butterworth bandpass filter to remove baseline wander and high-frequency noise.
+    """
+    nyquist = 0.5 * fs
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = scipy.signal.butter(order, [low, high], btype='band')
+    return scipy.signal.filtfilt(b, a, data)
+
+def min_max_normalize(data):
+    """
+    Normalizes a 1D numpy array to [0, 1] range.
+    """
+    min_val = np.min(data)
+    max_val = np.max(data)
+    denom = max_val - min_val
+    if denom == 0:
+        return np.zeros_like(data)
+    return (data - min_val) / denom
 
 def calculate_severity_from_atr(file_path):
     """
@@ -56,12 +78,14 @@ def calculate_severity_from_atr(file_path):
 
 class IcentiaECGDataset(Dataset):
     """
-    Lazy-loading Dataset class to pipe 1D ECG voltage arrays into Apple Silicon.
+    Lazy-loading Dataset class to pipe 1D ECG voltage arrays into PyTorch.
+    Optimized for multi-process loaders and cached for high epoch iteration speed.
     """
-    def __init__(self, record_paths, window_size=2500.0):
-        # window_size 2500.0 = exactly 10.0 seconds at 250.0 Hz
+    def __init__(self, record_paths, window_size=500.0):
+        # window_size 500.0 = exactly 2.0 seconds at 250.0 Hz
         self.record_paths = record_paths
         self.window_size = int(window_size)
+        self.label_cache = {}
 
     def __len__(self):
         return len(self.record_paths)
@@ -75,11 +99,22 @@ class IcentiaECGDataset(Dataset):
         # 2. Extract 1D array and force float32
         raw_signal = record.p_signal[:, 0].astype(np.float32)
 
-        # 3. Shape for 1D CNN: (Channels, Sequence_Length) -> (1, 2500)
-        tensor_x = torch.tensor(raw_signal).unsqueeze(0)
+        # 3. Apply band-pass filter (0.5 Hz - 45 Hz)
+        filtered_signal = bandpass_filter(raw_signal, lowcut=0.5, highcut=45.0, fs=250.0)
 
-        # 4. Attach severity label
-        severity_float = calculate_severity_from_atr(record_path)
+        # 4. Apply Min-Max normalization to range [0, 1]
+        normalized_signal = min_max_normalize(filtered_signal)
+
+        # 5. Shape for 1D CNN: (Channels, Sequence_Length) -> (1, 500)
+        tensor_x = torch.tensor(normalized_signal, dtype=torch.float32).unsqueeze(0)
+
+        # 6. Retrieve or calculate the severity label
+        if idx in self.label_cache:
+            severity_float = self.label_cache[idx]
+        else:
+            severity_float = calculate_severity_from_atr(record_path)
+            self.label_cache[idx] = severity_float
+
         tensor_y = torch.tensor(severity_float, dtype=torch.long)
 
         return tensor_x, tensor_y

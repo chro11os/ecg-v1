@@ -25,12 +25,11 @@ ChartJS.register(
 
 interface Props {
     signal: number[];
-    darkMode: boolean;
     severity: number;
     rPeaks?: number[];
 }
 
-const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) => {
+const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks }) => {
     const chartRef = useRef<any>(null);
 
     const peaksData = new Array(signal.length).fill(null);
@@ -48,7 +47,7 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
             {
                 label: "Lead I ECG (voltage)",
                 data: signal,
-                borderColor: "#22d3ee",
+                borderColor: "#0066CC",
                 borderWidth: 1.5,
                 pointRadius: 0,
                 tension: 0.1,
@@ -56,8 +55,8 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
             ...(rPeaks && rPeaks.length > 0 ? [{
                 label: "R-Peaks",
                 data: peaksData,
-                borderColor: "#ef4444",
-                backgroundColor: "#ef4444",
+                borderColor: "#DC2626",
+                backgroundColor: "#DC2626",
                 pointRadius: 5,
                 pointHoverRadius: 7,
                 showLine: false,
@@ -110,11 +109,11 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
             const endX = x.getPixelForValue(chart.data.labels[endIndex]);
 
             // Draw soft Neubrutalist semi-transparent red overlay
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.08)';
             ctx.fillRect(startX, top, endX - startX, bottom - top);
 
             // Draw structural dashed boundary lines
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.35)';
+            ctx.strokeStyle = 'rgba(220, 38, 38, 0.35)';
             ctx.lineWidth = 1.5;
             ctx.setLineDash([5, 4]);
             ctx.beginPath();
@@ -125,7 +124,7 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
             ctx.stroke();
 
             // Text indicator
-            ctx.fillStyle = '#ef4444';
+            ctx.fillStyle = '#DC2626';
             ctx.font = 'bold 10px monospace';
             ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, top + 18);
             ctx.restore();
@@ -133,30 +132,30 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-none p-6 shadow-sm dark:shadow-none transition-colors duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="bg-card-bg border border-border-subtle rounded-none p-6 shadow-xs transition-colors duration-300">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-border-subtle">
                 <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Live ECG Signal Strip</h3>
-                    <p className="text-xs text-slate-500 font-mono tracking-widest uppercase mt-0.5">
+                    <h3 className="text-xl font-bold text-text-primary">Live ECG Signal Strip</h3>
+                    <p className="text-xs text-brand-secondary font-mono tracking-widest uppercase mt-0.5">
                         Wheel to Zoom • Drag to Pan
                     </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <button 
                         onClick={() => setPaperSpeed(25)}
-                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-bg-canvas hover:bg-border-subtle text-text-primary border border-border-subtle rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
                     >
                         25 mm/s
                     </button>
                     <button 
                         onClick={() => setPaperSpeed(50)}
-                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-bg-canvas hover:bg-border-subtle text-text-primary border border-border-subtle rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
                     >
                         50 mm/s
                     </button>
                     <button 
                         onClick={resetChartZoom}
-                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50 rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-status-critical/10 hover:bg-status-critical/20 text-status-critical border border-status-critical/20 rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
                     >
                         Reset Zoom
                     </button>
@@ -194,13 +193,13 @@ const WaveformChart: React.FC<Props> = ({ signal, darkMode, severity, rPeaks }) 
                         scales: {
                             x: { 
                                 display: true, 
-                                grid: { color: darkMode ? "#1e293b" : "#e2e8f0" }, 
-                                ticks: { color: darkMode ? "#64748b" : "#94a3b8", maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } 
+                                grid: { color: "#E5E7EB" }, 
+                                ticks: { color: "#4A5568", maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } 
                             },
                             y: { 
                                 display: true, 
-                                grid: { color: darkMode ? "#1e293b" : "#e2e8f0" }, 
-                                ticks: { color: darkMode ? "#64748b" : "#94a3b8" } 
+                                grid: { color: "#E5E7EB" }, 
+                                ticks: { color: "#4A5568" } 
                             },
                         }
                     }}

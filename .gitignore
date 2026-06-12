@@ -1,4 +1,43 @@
+# Dataset (36GB raw PhysioNet records)
 /ml_pipeline/physionet_data_aws/
+*.dat
+*.hea
+*.atr
+
+
+# Virtual Environments
 /venv/
-/__pycache__/
-/fast_api_backend/afib_cnn_lstm_v1.pt/
+/.venv/
+/env/
+/ENV/
+
+# Python caching and compilation files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Node.js / Frontend dependencies and builds
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+.eslintcache
+.node_repl_history
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# IDEs and editors configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/

@@ -5,42 +5,41 @@ import WaveformChart from "./WaveformChart";
 
 interface Props {
 	data: DiagnosisData;
-	darkMode: boolean;
 	onReset: () => void;
 }
 
 const severityMap = {
 	0: {
 		label: "0 - Normal",
-		color: "text-emerald-500 dark:text-emerald-400 font-extrabold",
-		border: "border-emerald-500",
-		bg: "bg-emerald-500/10",
-		cardHighlight: "bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500 dark:border-emerald-500/50 shadow-[0_8px_30px_rgba(16,185,129,0.08)] scale-[1.01] font-bold",
+		color: "text-status-healthy font-extrabold",
+		border: "border-status-healthy",
+		bg: "bg-status-healthy/10",
+		cardHighlight: "bg-status-healthy/5 border border-status-healthy shadow-[0_8px_30px_rgba(22,163,74,0.08)] scale-[1.01] font-bold",
 	},
 	1: {
 		label: "1 - Trace",
-		color: "text-amber-500 dark:text-amber-400 font-extrabold",
-		border: "border-amber-500",
-		bg: "bg-amber-500/10",
-		cardHighlight: "bg-amber-500/5 dark:bg-amber-950/20 border border-amber-500 dark:border-amber-500/50 shadow-[0_8px_30px_rgba(245,158,11,0.08)] scale-[1.01] font-bold",
+		color: "text-status-info font-extrabold",
+		border: "border-status-info",
+		bg: "bg-status-info/10",
+		cardHighlight: "bg-status-info/5 border border-status-info shadow-[0_8px_30px_rgba(37,99,235,0.08)] scale-[1.01] font-bold",
 	},
 	2: {
 		label: "2 - Mild",
-		color: "text-orange-500 dark:text-orange-400 font-extrabold",
-		border: "border-orange-500",
-		bg: "bg-orange-500/10",
-		cardHighlight: "bg-orange-500/5 dark:bg-orange-950/20 border border-orange-500 dark:border-orange-500/50 shadow-[0_8px_30px_rgba(249,115,22,0.08)] scale-[1.01] font-bold",
+		color: "text-status-warning font-extrabold",
+		border: "border-status-warning",
+		bg: "bg-status-warning/10",
+		cardHighlight: "bg-status-warning/5 border border-status-warning shadow-[0_8px_30px_rgba(217,119,6,0.08)] scale-[1.01] font-bold",
 	},
 	3: {
 		label: "3 - Severe",
-		color: "text-red-500 dark:text-red-400 font-extrabold",
-		border: "border-red-500",
-		bg: "bg-red-500/10",
-		cardHighlight: "bg-red-500/5 dark:bg-red-950/20 border border-red-500 dark:border-red-500/50 shadow-[0_8px_30px_rgba(239,68,68,0.08)] scale-[1.01] font-bold",
+		color: "text-status-critical font-extrabold",
+		border: "border-status-critical",
+		bg: "bg-status-critical/10",
+		cardHighlight: "bg-status-critical/5 border border-status-critical shadow-[0_8px_30px_rgba(220,38,38,0.08)] scale-[1.01] font-bold",
 	},
 };
 
-const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
+const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 	const chartRef = useRef<HTMLCanvasElement | null>(null);
 	const severityInfo = severityMap[data.severity];
 
@@ -58,15 +57,15 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 				<style>
 					body {
 						font-family: 'Helvetica Neue', Arial, sans-serif;
-						color: #0f172a;
-						background: #ffffff;
+						color: #121417;
+						background: #F8F9FA;
 						padding: 40px;
 						margin: 0;
 					}
 					.header {
 						display: flex;
 						justify-content: space-between;
-						border-bottom: 2px solid #0f172a;
+						border-bottom: 2px solid #121417;
 						padding-bottom: 20px;
 						margin-bottom: 30px;
 					}
@@ -79,14 +78,14 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					.title-section p {
 						margin: 0;
 						font-family: monospace;
-						color: #64748b;
+						color: #4A5568;
 						font-size: 11px;
 					}
 					.meta-ledger {
 						text-align: right;
 						font-family: monospace;
 						font-size: 11px;
-						color: #475569;
+						color: #4A5568;
 					}
 					.diagnostic-summary {
 						display: flex;
@@ -95,13 +94,14 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					}
 					.summary-box {
 						flex: 1;
-						border: 1px solid #e2e8f0;
+						background: #FFFFFF;
+						border: 1px solid #E5E7EB;
 						padding: 20px;
 					}
 					.summary-box h3 {
 						margin: 0 0 10px 0;
 						font-size: 12px;
-						color: #64748b;
+						color: #4A5568;
 						text-transform: uppercase;
 						letter-spacing: 1.5px;
 					}
@@ -110,20 +110,21 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 						font-size: 24px;
 						font-weight: 700;
 					}
-					.severity-badge-0 { color: #10b981; }
-					.severity-badge-1 { color: #f59e0b; }
-					.severity-badge-2 { color: #f97316; }
-					.severity-badge-3 { color: #ef4444; }
+					.severity-badge-0 { color: #16A34A; }
+					.severity-badge-1 { color: #2563EB; }
+					.severity-badge-2 { color: #D97706; }
+					.severity-badge-3 { color: #DC2626; }
 					
 					.signal-strip-container {
-						border: 1px solid #e2e8f0;
+						background: #FFFFFF;
+						border: 1px solid #E5E7EB;
 						padding: 20px;
 						margin-bottom: 40px;
 					}
 					.signal-strip-container h3 {
 						margin: 0 0 15px 0;
 						font-size: 12px;
-						color: #64748b;
+						color: #4A5568;
 						text-transform: uppercase;
 						letter-spacing: 1.5px;
 					}
@@ -135,8 +136,8 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					}
 					.telemetry-item {
 						flex: 1;
-						background: #f8fafc;
-						border: 1px solid #e2e8f0;
+						background: #FFFFFF;
+						border: 1px solid #E5E7EB;
 						padding: 15px;
 						font-family: monospace;
 					}
@@ -148,7 +149,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					}
 					.telemetry-item .value {
 						font-weight: bold;
-						color: #0f172a;
+						color: #121417;
 					}
 
 					.sign-off-zone {
@@ -156,18 +157,18 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 						display: flex;
 						justify-content: space-between;
 						align-items: flex-end;
-						border-top: 1px dashed #cbd5e1;
+						border-top: 1px dashed #E5E7EB;
 						padding-top: 30px;
 					}
 					.signature-box {
 						width: 250px;
-						border-bottom: 1px solid #0f172a;
+						border-bottom: 1px solid #121417;
 						height: 50px;
 					}
 					.signature-label {
 						font-family: monospace;
 						font-size: 11px;
-						color: #64748b;
+						color: #4A5568;
 						margin-top: 5px;
 					}
 
@@ -201,20 +202,20 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					</div>
 					<div class="summary-box">
 						<h3>Softmax Confidence</h3>
-						<p style="color: #06b6d4">${data.confidence}%</p>
+						<p style="color: #0066CC">${data.confidence}%</p>
 					</div>
 					<div class="summary-box">
 						<h3>Calculated AF Burden</h3>
-						<p style="color: #10b981">${data.burden}%</p>
+						<p style="color: #16A34A">${data.burden}%</p>
 					</div>
 				</div>
 
 				<div class="signal-strip-container">
 					<h3>10-Second Waveform Strip (R-Peaks Annotated)</h3>
-					<p style="font-size: 13px; color: #64748b; margin: -5px 0 15px 0; font-family: monospace;">
+					<p style="font-size: 13px; color: #4A5568; margin: -5px 0 15px 0; font-family: monospace;">
 						ECG Lead I: annotated with ${data.rPeaks?.length ?? 0} isolated R-peak landmarks.
 					</p>
-					<div style="height: 180px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background: #fafafa; font-family: monospace; font-size: 12px; color: #64748b;">
+					<div style="height: 180px; border: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: center; background: #FFFFFF; font-family: monospace; font-size: 12px; color: #4A5568;">
 						[ High-resolution layout capture vector details loaded natively in main interface strip ]
 					</div>
 				</div>
@@ -248,7 +249,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 						<div class="signature-label">Attending Cardiologist Signature</div>
 					</div>
 					<div>
-						<div style="font-family: monospace; font-size: 11px; text-align: right; color: #94a3b8;">
+						<div style="font-family: monospace; font-size: 11px; text-align: right; color: #4A5568;">
 							Classification Model Version: 1D CNN-LSTM v1.0.0
 						</div>
 					</div>
@@ -279,7 +280,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 				datasets: [
 					{
 						data: [data.confidence, 100 - data.confidence],
-						backgroundColor: ["#22d3ee", darkMode ? "#1e293b" : "#e2e8f0"],
+						backgroundColor: ["#0066CC", "#E5E7EB"],
 						borderWidth: 0,
 					},
 				],
@@ -297,27 +298,27 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 		return () => {
 			chart.destroy();
 		};
-	}, [data, darkMode]);
+	}, [data]);
 
 	return (
-		<div className="w-full text-slate-900 dark:text-white transition-colors duration-300">
+		<div className="w-full text-text-primary transition-colors duration-300">
 			<div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<div className="lg:col-span-2 space-y-6">
-					<div className="glass rounded-none p-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+					<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
 						<div className="flex items-center justify-between gap-4 flex-wrap">
 							<div>
 								<h1 className="text-3xl font-bold">Diagnosis Dashboard</h1>
-								<p className="text-slate-500 dark:text-slate-300 mt-1">Atrial Fibrillation Severity Analysis</p>
+								<p className="text-brand-secondary mt-1">Atrial Fibrillation Severity Analysis</p>
 							</div>
 							<div className="flex items-center gap-4 flex-wrap">
 								<button
 									onClick={exportReport}
-									className="px-4 py-2.5 text-xs font-mono font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+									className="px-4 py-2.5 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
 								>
 									EXPORT REPORT
 								</button>
 								<div className={`px-6 py-3 rounded-none border ${severityInfo.bg} ${severityInfo.border}`}>
-									<p className="text-sm uppercase tracking-wider opacity-80">Severity Status</p>
+									<p className="text-sm uppercase tracking-wider opacity-85">Severity Status</p>
 									<h2 className={`text-3xl font-bold ${severityInfo.color}`}>
 										{severityInfo.label}
 									</h2>
@@ -327,18 +328,18 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					</div>
 
 					<div className="lg:col-span-2">
-						<WaveformChart signal={data.rawSignal} darkMode={darkMode} severity={data.severity} rPeaks={data.rPeaks} />
+						<WaveformChart signal={data.rawSignal} severity={data.severity} rPeaks={data.rPeaks} />
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						<div className="glass rounded-none p-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
 							<div className="flex items-center justify-between mb-4">
 								<div>
 									<h3 className="text-xl font-semibold">Confidence Gauge</h3>
-									<p className="text-slate-500 dark:text-slate-400 text-sm">Softmax Probability</p>
+									<p className="text-brand-secondary text-sm">Softmax Probability</p>
 								</div>
 								<div className="text-right">
-									<p className="text-4xl font-bold text-cyan-600 dark:text-cyan-400">{data.confidence}%</p>
+									<p className="text-4xl font-bold text-brand-primary">{data.confidence}%</p>
 								</div>
 							</div>
 							<div className="h-72 flex items-center justify-center">
@@ -346,26 +347,26 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 							</div>
 						</div>
 
-						<div className="glass rounded-none p-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none flex flex-col justify-between">
+						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs flex flex-col justify-between">
 							<div className="flex items-center justify-between mb-4">
 								<div>
 									<h3 className="text-xl font-semibold">AF Burden Meter</h3>
-									<p className="text-slate-500 dark:text-slate-400 text-sm">Calculated AF Burden</p>
+									<p className="text-brand-secondary text-sm">Calculated AF Burden</p>
 								</div>
 								<div className="text-right">
-									<p className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">{data.burden}%</p>
+									<p className="text-4xl font-bold text-status-healthy">{data.burden}%</p>
 								</div>
 							</div>
 							<div className="mt-6 flex-1 flex flex-col justify-center">
-								<div className="w-full h-8 bg-slate-200 dark:bg-slate-800 rounded-none overflow-hidden">
+								<div className="w-full h-8 bg-border-subtle rounded-none overflow-hidden">
 									<div
-										className="h-full bg-linear-to-r from-emerald-400 to-green-500 rounded-none flex items-center justify-end pr-4 font-semibold transition-all duration-500"
+										className="h-full bg-linear-to-r from-status-healthy to-status-warning rounded-none flex items-center justify-end pr-4 font-semibold text-white transition-all duration-500"
 										style={{ width: `${data.burden}%` }}
 									>
 										{data.burden}%
 									</div>
 								</div>
-								<div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-3">
+								<div className="flex justify-between text-xs text-brand-secondary mt-3">
 									<span>Normal</span>
 									<span>Trace</span>
 									<span>Mild</span>
@@ -374,43 +375,43 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 							</div>
 						</div>
 
-						<div className="glass rounded-none p-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none flex flex-col justify-between">
+						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs flex flex-col justify-between">
 							<div className="flex items-center justify-between mb-4">
 								<div>
 									<h3 className="text-xl font-semibold">Landmark DSP</h3>
-									<p className="text-slate-500 dark:text-slate-400 text-sm">Algorithmic Gating</p>
+									<p className="text-brand-secondary text-sm">Algorithmic Gating</p>
 								</div>
 								<div className="text-right">
-									<p className="text-sm font-mono text-cyan-600 dark:text-cyan-400 font-bold">Peaks: {data.rPeaks?.length ?? 0}</p>
+									<p className="text-sm font-mono text-brand-primary font-bold">Peaks: {data.rPeaks?.length ?? 0}</p>
 								</div>
 							</div>
 							<div className="space-y-4 my-2 flex-1 flex flex-col justify-center">
-								<div className="bg-slate-100/50 dark:bg-slate-900/40 p-3 border border-slate-200/50 dark:border-slate-800/80">
-									<div className="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
+								<div className="bg-bg-canvas p-3 border border-border-subtle">
+									<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
 										<span>R-R Variance</span>
-										<span className="text-cyan-600 dark:text-cyan-400 font-bold">{data.rrVariance ?? 0.0} ms²</span>
+										<span className="text-brand-primary font-bold">{data.rrVariance ?? 0.0} ms²</span>
 									</div>
-									<div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800">
+									<div className="w-full h-1.5 bg-border-subtle">
 										<div 
-											className="h-full bg-cyan-500" 
+											className="h-full bg-brand-primary" 
 											style={{ width: `${Math.min((data.rrVariance ?? 0.0) / 10.0, 100.0)}%` }}
 										/>
 									</div>
 								</div>
-								<div className="bg-slate-100/50 dark:bg-slate-900/40 p-3 border border-slate-200/50 dark:border-slate-800/80">
-									<div className="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
+								<div className="bg-bg-canvas p-3 border border-border-subtle">
+									<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
 										<span>RMSSD</span>
-										<span className="text-emerald-600 dark:text-emerald-400 font-bold">{data.rmssd ?? 0.0} ms</span>
+										<span className="text-status-healthy font-bold">{data.rmssd ?? 0.0} ms</span>
 									</div>
-									<div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800">
+									<div className="w-full h-1.5 bg-border-subtle">
 										<div 
-											className="h-full bg-emerald-500" 
+											className="h-full bg-status-healthy" 
 											style={{ width: `${Math.min((data.rmssd ?? 0.0) / 2.0, 100.0)}%` }}
 										/>
 									</div>
 								</div>
 							</div>
-							<div className="text-[10px] font-mono text-slate-400 tracking-normal mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-2 shrink-0">
+							<div className="text-[10px] font-mono text-brand-secondary tracking-normal mt-2 border-t border-border-subtle pt-2 shrink-0">
 								{data.severity === 0 ? "Sinus rhythm: uniform peak intervals." : 
 								 data.severity === 1 ? "Trace AFib: minor temporal peak jitter." : 
 								 data.severity === 2 ? "Mild AFib: elevated R-R segment variance." : 
@@ -419,29 +420,29 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 						</div>
 					</div>
 
-					<div className="glass rounded-none p-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+					<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
 						<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 							<div>
 								<h3 className="text-xl font-semibold">Inference Metadata</h3>
-								<p className="text-slate-500 dark:text-slate-400 text-sm">Runtime diagnostics</p>
+								<p className="text-brand-secondary text-sm">Runtime diagnostics</p>
 							</div>
 							<div className="flex gap-4 flex-wrap">
-								<div className="bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-none px-5 py-4 min-w-45">
-									<p className="text-slate-500 dark:text-slate-400 text-sm">Hardware Used</p>
+								<div className="bg-bg-canvas border border-border-subtle rounded-none px-5 py-4 min-w-45">
+									<p className="text-brand-secondary text-sm">Hardware Used</p>
 									<div className="flex items-center gap-2 mt-1">
-										<span className="w-3.5 h-3.5 bg-green-400"></span>
+										<span className="w-3.5 h-3.5 bg-status-healthy"></span>
 										<span className="text-lg font-semibold uppercase">{data.hardware}</span>
 									</div>
 								</div>
-								<div className="bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-none px-5 py-4 min-w-45">
-									<p className="text-slate-500 dark:text-slate-400 text-sm">Response Time</p>
+								<div className="bg-bg-canvas border border-border-subtle rounded-none px-5 py-4 min-w-45">
+									<p className="text-brand-secondary text-sm">Response Time</p>
 									<div className="flex items-center gap-2 mt-1">
 										<span className="text-lg font-semibold">{data.responseTime} ms</span>
 									</div>
 								</div>
 								<button
 									onClick={onReset}
-									className="bg-cyan-600 dark:bg-cyan-500 hover:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 rounded-none px-6 py-4 font-bold transition-colors cursor-pointer"
+									className="bg-brand-primary hover:bg-brand-primary/95 text-white rounded-none px-6 py-4 font-bold transition-colors cursor-pointer"
 								>
 									NEW SCAN
 								</button>
@@ -450,7 +451,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 					</div>
 				</div>
 
-				<div className="glass rounded-none p-6 flex flex-col bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+				<div className="rounded-none p-6 flex flex-col bg-card-bg border border-border-subtle shadow-xs">
 					<h3 className="text-2xl font-bold mb-6">Severity Classes</h3>
 					<div className="space-y-4">
 						{[0, 1, 2, 3].map((level) => {
@@ -462,7 +463,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 									className={`p-4 rounded-none border transition-all duration-300 ${
 										isActive 
 											? current.cardHighlight 
-											: "bg-slate-50/50 dark:bg-slate-900/10 border-slate-100 dark:border-slate-800/60 opacity-40 hover:opacity-60 scale-98 cursor-default"
+											: "bg-bg-canvas/50 border-border-subtle/50 opacity-40 hover:opacity-60 scale-98 cursor-default"
 									}`}
 								>
 									<div className="flex justify-between items-center">
@@ -485,3 +486,4 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, darkMode, onReset }) => {
 };
 
 export default DiagnosisDashboard;
+
