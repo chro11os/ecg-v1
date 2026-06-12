@@ -1,9 +1,9 @@
-# Dataset (36GB raw PhysioNet records)
-/ml_pipeline/physionet_data_aws/
+# Dataset and Backups (36GB raw PhysioNet records)
+physionet_data_aws/
+/ml_pipeline_mac_backup/
 *.dat
 *.hea
 *.atr
-
 
 # Virtual Environments
 /venv/

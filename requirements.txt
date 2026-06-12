@@ -1,0 +1,16 @@
+# PyTorch ROCm Nightly pre-releases
+--extra-index-url https://download.pytorch.org/whl/nightly/rocm7.2
+--pre
+torch
+torchvision
+torchaudio
+
+# Web server and API dependencies
+fastapi
+uvicorn
+
+# Scientific and signal processing libraries
+numpy
+scipy
+wfdb
+scikit-learn

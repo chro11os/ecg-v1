@@ -1,0 +1,15 @@
+# PyTorch for macOS (Native Apple Silicon GPU support via MPS)
+torch
+torchvision
+torchaudio
+
+# Web server and API dependencies
+fastapi
+uvicorn
+requests
+
+# Scientific and signal processing libraries
+numpy
+scipy
+wfdb
+scikit-learn
