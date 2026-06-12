@@ -41,3 +41,6 @@ ehthumbs.db
 .project
 .pydevproject
 .settings/
+
+# Generated metadata cache
+/ml_pipeline/metadata_cache.json
