@@ -328,7 +328,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 					</div>
 
 					<div className="lg:col-span-2">
-						<WaveformChart signal={data.rawSignal} severity={data.severity} rPeaks={data.rPeaks} />
+						<WaveformChart signal={data.rawSignal} severity={data.severity} rPeaks={data.rPeaks} gradCam={data.gradCam} />
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">

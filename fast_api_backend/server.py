@@ -10,7 +10,7 @@ from typing import List
 from starlette.middleware.cors import CORSMiddleware
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from model import AFCNN_LSTM
+from model import AFCNN_LSTM, compute_grad_cam
 
 app = FastAPI(title="ECG Atrial Fibrillation API")
 
@@ -79,6 +79,9 @@ async def predict_ecg(payload: ECGPayload):
         severity_class = int(pred.item())
         confidence = float(conf.item())
 
+        # Compute Grad-CAM explainability maps (500 values scaled [0, 1])
+        grad_cam_values = compute_grad_cam(model, x, severity_class)
+
         # 6. Traditional DSP landmark peak detection and interval gating on the full uploaded signal (for frontend rendering)
         max_val_full = np.max(raw_signal)
         r_peaks, _ = sig.find_peaks(raw_signal, distance=100, height=max_val_full * 0.45)
@@ -109,7 +112,8 @@ async def predict_ecg(payload: ECGPayload):
             "hardware_used": hardware,
             "r_peaks": r_peaks_list,
             "rr_variance": round(rr_variance, 2),
-            "rmssd": round(rmssd, 2)
+            "rmssd": round(rmssd, 2),
+            "grad_cam": grad_cam_values
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

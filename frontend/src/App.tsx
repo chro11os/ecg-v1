@@ -16,6 +16,7 @@ interface HistoryItem {
     rPeaks?: number[];
     rrVariance?: number;
     rmssd?: number;
+    gradCam?: number[];
 }
 
 interface PatientScan {
@@ -30,6 +31,7 @@ interface PatientScan {
     rPeaks: number[];
     rrVariance: number;
     rmssd: number;
+    gradCam?: number[];
 }
 
 interface PatientRecord {
@@ -203,7 +205,8 @@ export default function App() {
                 rawSignal: incomingSignal,
                 rPeaks: result.r_peaks ?? [],
                 rrVariance: result.rr_variance ?? 0.0,
-                rmssd: result.rmssd ?? 0.0
+                rmssd: result.rmssd ?? 0.0,
+                gradCam: result.grad_cam ?? []
             };
 
             setDiagnosis(newDiagnosis);
@@ -233,7 +236,8 @@ export default function App() {
             rawSignal: item.rawSignal,
             rPeaks: item.rPeaks,
             rrVariance: item.rrVariance,
-            rmssd: item.rmssd
+            rmssd: item.rmssd,
+            gradCam: item.gradCam
         });
         setHistoryOpen(false);
     };
@@ -248,7 +252,8 @@ export default function App() {
             rawSignal: scan.rawSignal,
             rPeaks: scan.rPeaks,
             rrVariance: scan.rrVariance,
-            rmssd: scan.rmssd
+            rmssd: scan.rmssd,
+            gradCam: scan.gradCam
         });
         setHistoryOpen(false);
     };

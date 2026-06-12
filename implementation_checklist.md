@@ -54,13 +54,13 @@ This checklist identifies the gaps between your current implementation and the s
 
 
 ### 5. Explainable AI (Grad-CAM Integration)
-* [ ] **1D Grad-CAM Extractor:**
+* [x] **1D Grad-CAM Extractor:**
   * Write a Grad-CAM hook in PyTorch to compute gradients from the last Conv1D layer with respect to class predictions. This highlights exactly which parts of the 2-second ECG wave triggered the classification.
-* [ ] **API Payload Expansion:**
+* [x] **API Payload Expansion:**
   * Update the `/predict` response in [server.py](file:///home/chrollos/Documents/ecg-v1/fast_api_backend/server.py) to return the calculated Grad-CAM activation array (500 values scaled `[0, 1]`) alongside the diagnosis.
 
 ### 6. GUI and API Sync
 * [x] **API Validation Updates:**
   * Change [server.py](file:///home/chrollos/Documents/ecg-v1/fast_api_backend/server.py) payload verification limit from `2500` to `500` samples.
-* [ ] **Frontend Chart Highlight:**
+* [x] **Frontend Chart Highlight:**
   * Update the frontend [WaveformChart.tsx](file:///home/chrollos/Documents/ecg-v1/frontend/src/components/WaveformChart.tsx) to overlay a heat-map color gradient representing the Grad-CAM activation values, making the model decisions explainable.

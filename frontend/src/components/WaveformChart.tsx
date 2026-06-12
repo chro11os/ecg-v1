@@ -27,9 +27,10 @@ interface Props {
     signal: number[];
     severity: number;
     rPeaks?: number[];
+    gradCam?: number[];
 }
 
-const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks }) => {
+const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks, gradCam }) => {
     const chartRef = useRef<any>(null);
 
     const peaksData = new Array(signal.length).fill(null);
@@ -86,47 +87,83 @@ const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks }) => {
         }
     };
 
-    // Custom inline plugin to highlight arrhythmic segments for severity 2 and 3
+    // Custom inline plugin to highlight arrhythmic segments and overlay Grad-CAM heatmap
     const highlightPlugin = {
         id: 'arrhythmiaHighlight',
         beforeDraw: (chart: any) => {
-            const showHighlight = severity === 2 || severity === 3;
-            if (!showHighlight) return;
-
             const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
             ctx.save();
-            
-            // Highlight erratic ECG window (e.g. from 3.0s to 7.0s)
-            const startIndex = 750; // 3 seconds
-            const endIndex = 1750;   // 7 seconds
 
-            if (!chart.data.labels[startIndex] || !chart.data.labels[endIndex]) {
-                ctx.restore();
-                return;
+            // 1. Draw Grad-CAM Heatmap if available
+            if (gradCam && gradCam.length > 0) {
+                const numSamples = Math.min(gradCam.length, chart.data.labels.length);
+                for (let i = 0; i < numSamples - 1; i++) {
+                    const label1 = chart.data.labels[i];
+                    const label2 = chart.data.labels[i + 1];
+                    if (label1 === undefined || label2 === undefined) break;
+
+                    const x1 = x.getPixelForValue(label1);
+                    const x2 = x.getPixelForValue(label2);
+                    const val = gradCam[i]; // value scaled between [0, 1]
+
+                    if (val > 0.02) {
+                        // Soft transparent red overlay for attention areas
+                        ctx.fillStyle = `rgba(220, 38, 38, ${val * 0.25})`;
+                        ctx.fillRect(x1, top, x2 - x1, bottom - top);
+                    }
+                }
+
+                // Draw attention boundary line (2.0s mark, index 500)
+                const boundaryIndex = 500;
+                if (chart.data.labels[boundaryIndex]) {
+                    const boundaryX = x.getPixelForValue(chart.data.labels[boundaryIndex]);
+                    ctx.strokeStyle = 'rgba(0, 102, 204, 0.4)';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(boundaryX, top);
+                    ctx.lineTo(boundaryX, bottom);
+                    ctx.stroke();
+
+                    // Text indicator for attention boundary
+                    ctx.fillStyle = '#0066CC';
+                    ctx.font = 'bold 9px monospace';
+                    ctx.fillText('MODEL ATTENTION WINDOW (2.0s)', boundaryX - 175, top + 15);
+                }
             }
 
-            const startX = x.getPixelForValue(chart.data.labels[startIndex]);
-            const endX = x.getPixelForValue(chart.data.labels[endIndex]);
+            // 2. Draw traditional heuristic highlight for severity 2 & 3
+            const showHeuristicHighlight = severity === 2 || severity === 3;
+            if (showHeuristicHighlight) {
+                const startIndex = 750; // 3 seconds
+                const endIndex = 1750;   // 7 seconds
 
-            // Draw soft Neubrutalist semi-transparent red overlay
-            ctx.fillStyle = 'rgba(220, 38, 38, 0.08)';
-            ctx.fillRect(startX, top, endX - startX, bottom - top);
+                if (chart.data.labels[startIndex] && chart.data.labels[endIndex]) {
+                    const startX = x.getPixelForValue(chart.data.labels[startIndex]);
+                    const endX = x.getPixelForValue(chart.data.labels[endIndex]);
 
-            // Draw structural dashed boundary lines
-            ctx.strokeStyle = 'rgba(220, 38, 38, 0.35)';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([5, 4]);
-            ctx.beginPath();
-            ctx.moveTo(startX, top);
-            ctx.lineTo(startX, bottom);
-            ctx.moveTo(endX, top);
-            ctx.lineTo(endX, bottom);
-            ctx.stroke();
+                    // Soft semi-transparent red overlay for heuristic region
+                    ctx.fillStyle = 'rgba(220, 38, 38, 0.04)';
+                    ctx.fillRect(startX, top, endX - startX, bottom - top);
 
-            // Text indicator
-            ctx.fillStyle = '#DC2626';
-            ctx.font = 'bold 10px monospace';
-            ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, top + 18);
+                    // structural dashed boundary lines
+                    ctx.strokeStyle = 'rgba(220, 38, 38, 0.2)';
+                    ctx.lineWidth = 1.2;
+                    ctx.setLineDash([5, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(startX, top);
+                    ctx.lineTo(startX, bottom);
+                    ctx.moveTo(endX, top);
+                    ctx.lineTo(endX, bottom);
+                    ctx.stroke();
+
+                    // Text indicator
+                    ctx.fillStyle = '#DC2626';
+                    ctx.font = 'bold 9px monospace';
+                    ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, top + 15);
+                }
+            }
+
             ctx.restore();
         }
     };

@@ -11,4 +11,5 @@ export interface DiagnosisData {
     rPeaks?: number[];
     rrVariance?: number;
     rmssd?: number;
+    gradCam?: number[];
 }
