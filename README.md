@@ -4,7 +4,7 @@ This project classifies the severity of Atrial Fibrillation (AFib) in patients u
 
 ---
 
-## 📊 Core Project Facts
+## Core Project Facts
 
 ### 1. Goal & Classes
 The system classifies ECG recordings into one of four severity levels based on the patient's **AFib Burden** (the percentage of time spent in AFib):
@@ -37,16 +37,16 @@ Before inference, raw ECG inputs go through the following steps:
 
 ---
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
-### 📦 Backend Dependencies (Python)
+### Backend Dependencies (Python)
 Make sure you have python 3.10+ installed. Install the required libraries in your environment:
 ```bash
 pip install -r requirements.txt
 ```
 *Key Packages:* `torch` (PyTorch), `fastapi` (API), `uvicorn` (Server), `scipy` (Filters/Peak detection), `wfdb` (PhysioNet file reader), `scikit-learn` (Metrics), `matplotlib` (Plotting).
 
-### 📦 Frontend Dependencies (Node.js)
+### Frontend Dependencies (Node.js)
 Navigate to the `frontend/` folder and install packages:
 ```bash
 cd frontend
@@ -56,7 +56,7 @@ npm install
 
 ---
 
-## 🚀 How to Run the Project
+## How to Run the Project
 
 ### 1. Run the Interactive GUI & API (Default Workflow)
 
