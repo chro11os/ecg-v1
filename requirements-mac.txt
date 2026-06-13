@@ -13,3 +13,4 @@ numpy
 scipy
 wfdb
 scikit-learn
+matplotlib
