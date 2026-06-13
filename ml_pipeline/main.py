@@ -46,7 +46,26 @@ def evaluate_model(model, data_loader, device, phase_name="Validation"):
     
     # Calculate ROC-AUC score safely (handling cases with missing classes)
     try:
-        roc_auc = roc_auc_score(all_targets, all_probs, multi_class='ovr', average='macro')
+        # Check unique classes present in validation/test set targets
+        classes_present = np.unique(all_targets)
+        if len(classes_present) > 1:
+            # We calculate One-vs-Rest ROC-AUC score only for classes that have
+            # both positive and negative examples in the target split.
+            num_classes = all_probs.shape[1]
+            roc_aucs = []
+            for c in range(num_classes):
+                y_true_c = (all_targets == c).astype(int)
+                # Ensure class c has at least one positive and one negative sample
+                if len(np.unique(y_true_c)) > 1:
+                    score = roc_auc_score(y_true_c, all_probs[:, c])
+                    roc_aucs.append(score)
+            
+            if len(roc_aucs) > 0:
+                roc_auc = np.mean(roc_aucs)
+            else:
+                roc_auc = 0.0
+        else:
+            roc_auc = 0.0
     except Exception:
         roc_auc = 0.0
 

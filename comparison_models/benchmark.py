@@ -38,8 +38,24 @@ def evaluate_model_metrics(model, test_loader, device):
     acc = accuracy_score(all_targets, all_preds)
     precision, recall, f1, _ = precision_recall_fscore_support(all_targets, all_preds, average='macro', zero_division=0)
 
+    # Calculate ROC-AUC score safely (handling cases with missing classes)
     try:
-        roc_auc = roc_auc_score(all_targets, all_probs, multi_class='ovr', average='macro')
+        classes_present = np.unique(all_targets)
+        if len(classes_present) > 1:
+            num_classes = all_probs.shape[1]
+            roc_aucs = []
+            for c in range(num_classes):
+                y_true_c = (all_targets == c).astype(int)
+                if len(np.unique(y_true_c)) > 1:
+                    score = roc_auc_score(y_true_c, all_probs[:, c])
+                    roc_aucs.append(score)
+            
+            if len(roc_aucs) > 0:
+                roc_auc = np.mean(roc_aucs)
+            else:
+                roc_auc = 0.5
+        else:
+            roc_auc = 0.5
     except Exception:
         roc_auc = 0.5
 
