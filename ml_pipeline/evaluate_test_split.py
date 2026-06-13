@@ -20,14 +20,10 @@ def run_evaluation():
     if device.type == "cuda":
         print(f"ROCm GPU Acceleration Enabled: {torch.cuda.get_device_name(0)}")
     
-    # 2. Gather patient files (expecting to run inside ml_pipeline/ directory)
-    absolute_target = './physionet_data_aws/p0*/*/*.dat'
-    patient_files = [f.replace('.dat', '') for f in glob.glob(absolute_target)]
-    
-    if len(patient_files) == 0:
-        # Fallback to check relative paths if run from root
-        absolute_target = './ml_pipeline/physionet_data_aws/p0*/*/*.dat'
-        patient_files = [f.replace('.dat', '') for f in glob.glob(absolute_target)]
+    # 2. Gather patient files dynamically using project root
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    target_pattern = os.path.join(project_root, 'ml_pipeline', 'physionet_data_aws', 'p0*', '*', '*.dat')
+    patient_files = [f.replace('.dat', '') for f in glob.glob(target_pattern)]
         
     if len(patient_files) == 0:
         print("CRITICAL FAILURE: No files found. Check your absolute path and working directory.")

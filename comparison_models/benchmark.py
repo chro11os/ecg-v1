@@ -61,9 +61,30 @@ def main():
         layout = json.load(f)
 
     test_files = layout["test"]
-    print(f"Testing Split Size: {len(test_files)} records")
+    
+    # Resolve paths dynamically (handles both relative and old absolute cross-platform paths)
+    project_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    resolved_test_files = []
+    for f in test_files:
+        if os.path.isabs(f):
+            if os.path.exists(f + ".dat"):
+                resolved_test_files.append(f)
+            else:
+                # Re-resolve relative to project root if absolute path mismatch
+                if "ml_pipeline/physionet_data_aws" in f:
+                    rel_sub = f[f.index("ml_pipeline/physionet_data_aws"):]
+                    resolved_test_files.append(os.path.join(project_root, rel_sub))
+                elif "physionet_data_aws" in f:
+                    rel_sub = f[f.index("physionet_data_aws"):]
+                    resolved_test_files.append(os.path.join(project_root, "ml_pipeline", rel_sub))
+                else:
+                    resolved_test_files.append(f)
+        else:
+            resolved_test_files.append(os.path.abspath(os.path.join(project_root, f)))
 
-    test_dataset = IcentiaECGDataset(record_paths=test_files, window_size=500.0)
+    print(f"Testing Split Size: {len(resolved_test_files)} records")
+
+    test_dataset = IcentiaECGDataset(record_paths=resolved_test_files, window_size=500.0)
     test_loader = DataLoader(
         test_dataset, batch_size=64, shuffle=False,
         num_workers=4, pin_memory=True, persistent_workers=True

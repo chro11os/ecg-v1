@@ -37,9 +37,14 @@ def train_balanced():
 
     # 3. Group files by class to manage splitting and oversampling without leakage
     class_groups = {0: [], 1: [], 2: [], 3: []}
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     for rel_path, label in cache_data.items():
-        # Ensure path is valid locally
-        abs_path = os.path.abspath(os.path.join(os.getcwd(), rel_path))
+        # Resolve path relative to project root
+        if rel_path.startswith("physionet_data_aws"):
+            abs_path = os.path.abspath(os.path.join(project_root, "ml_pipeline", rel_path))
+        else:
+            abs_path = os.path.abspath(os.path.join(project_root, rel_path))
+            
         if os.path.exists(abs_path + ".dat"):
             class_groups[label].append(abs_path)
 

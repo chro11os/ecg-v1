@@ -19,8 +19,13 @@ def export_real_samples():
         
     # Group available files by class
     class_groups = {0: [], 1: [], 2: [], 3: []}
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     for rel_path, label in cache_data.items():
-        abs_path = os.path.abspath(os.path.join(os.getcwd(), rel_path))
+        if rel_path.startswith("physionet_data_aws"):
+            abs_path = os.path.abspath(os.path.join(project_root, "ml_pipeline", rel_path))
+        else:
+            abs_path = os.path.abspath(os.path.join(project_root, rel_path))
+            
         if os.path.exists(abs_path + ".dat"):
             class_groups[label].append(abs_path)
             

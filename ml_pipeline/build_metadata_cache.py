@@ -11,24 +11,23 @@ from dataset import calculate_severity_from_atr
 
 def process_single_file(path):
     try:
-        # Resolve relative path consistent with main dataset references
-        rel_path = os.path.relpath(path, start=os.getcwd())
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        # Resolve relative path relative to the project root
+        rel_path = os.path.relpath(path, start=project_root)
         label = calculate_severity_from_atr(path)
         return rel_path, int(label)
     except Exception:
-        # Fallback to normal if any annotation reading error occurs
-        rel_path = os.path.relpath(path, start=os.getcwd())
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        rel_path = os.path.relpath(path, start=project_root)
         return rel_path, 0
 
 def build_cache():
     print("Searching for local patient records in physionet_data_aws...")
-    absolute_target = './physionet_data_aws/p0*/*/*.dat'
-    patient_files = [f.replace('.dat', '') for f in glob.glob(absolute_target)]
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     
-    if len(patient_files) == 0:
-        # Fallback if run from root
-        absolute_target = './ml_pipeline/physionet_data_aws/p0*/*/*.dat'
-        patient_files = [f.replace('.dat', '') for f in glob.glob(absolute_target)]
+    # Target always resolves relative to the project root directory
+    target_pattern = os.path.join(project_root, 'ml_pipeline', 'physionet_data_aws', 'p0*', '*', '*.dat')
+    patient_files = [f.replace('.dat', '') for f in glob.glob(target_pattern)]
         
     print(f"Found {len(patient_files)} files to scan.")
     if len(patient_files) == 0:

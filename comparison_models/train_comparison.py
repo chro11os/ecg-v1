@@ -85,9 +85,29 @@ def main():
         layout = json.load(f)
 
     train_files = layout["train"]
+    
+    # Resolve paths dynamically (handles both relative and old absolute cross-platform paths)
+    project_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    resolved_train_files = []
+    for f in train_files:
+        if os.path.isabs(f):
+            if os.path.exists(f + ".dat"):
+                resolved_train_files.append(f)
+            else:
+                # Re-resolve relative to project root if absolute path mismatch
+                if "ml_pipeline/physionet_data_aws" in f:
+                    rel_sub = f[f.index("ml_pipeline/physionet_data_aws"):]
+                    resolved_train_files.append(os.path.join(project_root, rel_sub))
+                elif "physionet_data_aws" in f:
+                    rel_sub = f[f.index("physionet_data_aws"):]
+                    resolved_train_files.append(os.path.join(project_root, "ml_pipeline", rel_sub))
+                else:
+                    resolved_train_files.append(f)
+        else:
+            resolved_train_files.append(os.path.abspath(os.path.join(project_root, f)))
 
     # Datasets
-    train_dataset = IcentiaECGDataset(record_paths=train_files, window_size=500.0)
+    train_dataset = IcentiaECGDataset(record_paths=resolved_train_files, window_size=500.0)
 
     # Loaders with optimal multithreading configurations
     train_loader = DataLoader(

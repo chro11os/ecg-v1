@@ -19,10 +19,10 @@ def prepare_splits():
     # Group files by class
     class_groups = {0: [], 1: [], 2: [], 3: []}
     for rel_path, label in cache_data.items():
-        # Build absolute path to prevent any context directory resolution errors
+        # Build absolute path to verify file existence locally
         abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", rel_path))
         if os.path.exists(abs_path + ".dat"):
-            class_groups[label].append(abs_path)
+            class_groups[label].append(rel_path)
 
     print("--- DATASET STATS ---")
     for cls, files in class_groups.items():
