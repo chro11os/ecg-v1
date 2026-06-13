@@ -164,7 +164,7 @@
             ]
         ]
     },
-    "Thesis 1D CNN-LSTM (Ours)": {
+    "1D CNN-LSTM": {
         "Accuracy": 0.6391263057929725,
         "Precision": 0.2523607374410091,
         "Recall": 0.2638180949346926,

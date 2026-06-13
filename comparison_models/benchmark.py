@@ -113,7 +113,7 @@ def main():
         ("1D CNN-GRU", CNN_GRU, "hybrid_gru.pth"),
         ("CNN-BiLSTM", CNN_BiLSTM, "hybrid_bilstm.pth"),
         ("Lightweight Transformer", ECGTransformer, "baseline_transformer.pth"),
-        ("Thesis 1D CNN-LSTM (Ours)", AFCNN_LSTM, "../afib_cnn_lstm_v1.pt")
+        ("1D CNN-LSTM", AFCNN_LSTM, "../afib_cnn_lstm_v1.pt")
     ]
 
     results = {}
@@ -124,7 +124,7 @@ def main():
         weights_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), weights_file)
         if not os.path.exists(weights_path):
             # Fallback checks for Thesis Model weights
-            if name == "Thesis 1D CNN-LSTM (Ours)":
+            if name == "1D CNN-LSTM":
                 weights_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../afib_cnn_lstm_v1.pt"))
                 if not os.path.exists(weights_path):
                     weights_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../ml_pipeline/afib_cnn_lstm_v1.pt"))
@@ -180,7 +180,12 @@ def main():
     print(f"{'Model Architecture':<30} | {'Accuracy':<8} | {'Precision':<9} | {'Recall':<8} | {'F1-Score':<8} | {'ROC-AUC':<8}")
     print("-"*95)
     for name, metrics in results.items():
-        print(f"{name:<30} | {metrics['Accuracy']*100:6.2f}% | {metrics['Precision']*100:7.2f}% | {metrics['Recall']*100:6.2f}% | {metrics['F1-Score']*100:6.2f}% | {metrics['ROC-AUC']:6.4f}")
+        row_str = f"{name:<30} | {metrics['Accuracy']*100:6.2f}% | {metrics['Precision']*100:7.2f}% | {metrics['Recall']*100:6.2f}% | {metrics['F1-Score']*100:6.2f}% | {metrics['ROC-AUC']:6.4f}"
+        if name == "1D CNN-LSTM":
+            # Highlight our model row in green using ANSI escape codes
+            print(f"\033[92m{row_str}\033[0m")
+        else:
+            print(row_str)
     print("="*95 + "\n")
 
     # Save benchmarking results to JSON
