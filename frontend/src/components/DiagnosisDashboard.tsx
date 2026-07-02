@@ -215,8 +215,8 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 					<p style="font-size: 13px; color: #4A5568; margin: -5px 0 15px 0; font-family: monospace;">
 						ECG Lead I: annotated with ${data.rPeaks?.length ?? 0} isolated R-peak landmarks.
 					</p>
-					<div style="height: 180px; border: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: center; background: #FFFFFF; font-family: monospace; font-size: 12px; color: #4A5568;">
-						[ High-resolution layout capture vector details loaded natively in main interface strip ]
+					<div style="border: 1px solid #E5E7EB; background: #FFFFFF; padding: 10px;">
+						<canvas id="waveform-canvas" width="1000" height="200" style="width: 100%; height: 200px; display: block;"></canvas>
 					</div>
 				</div>
 
@@ -257,10 +257,136 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 
 				<script>
 					window.onload = function() {
+						const canvas = document.getElementById('waveform-canvas');
+						if (canvas) {
+							const ctx = canvas.getContext('2d');
+							const width = canvas.width;
+							const height = canvas.height;
+							const signal = ${JSON.stringify(data.rawSignal)};
+							const rPeaks = ${JSON.stringify(data.rPeaks || [])};
+							const gradCam = ${JSON.stringify(data.gradCam || [])};
+							const severity = ${data.severity};
+
+							// Clear canvas
+							ctx.fillStyle = '#FFFFFF';
+							ctx.fillRect(0, 0, width, height);
+
+							// Draw grid lines
+							ctx.strokeStyle = '#F3F4F6';
+							ctx.lineWidth = 1;
+							const gridSpacingX = width / (signal.length / 25);
+							for (let x = 0; x < width; x += gridSpacingX) {
+								ctx.beginPath();
+								ctx.moveTo(x, 0);
+								ctx.lineTo(x, height);
+								ctx.stroke();
+							}
+							for (let y = 0; y < height; y += 20) {
+								ctx.beginPath();
+								ctx.moveTo(0, y);
+								ctx.lineTo(width, y);
+								ctx.stroke();
+							}
+
+							// Signal stats for normalization/rendering
+							const minVal = Math.min(...signal);
+							const maxVal = Math.max(...signal);
+							const range = maxVal - minVal || 1.0;
+
+							// Function to map signal index and value to canvas coordinates
+							const getX = (idx) => (idx / (signal.length - 1)) * width;
+							const getY = (val) => height - 15 - ((val - minVal) / range) * (height - 30);
+
+							// Draw Grad-CAM heatmap overlays if available
+							if (gradCam && gradCam.length > 0) {
+								const numSamples = Math.min(gradCam.length, signal.length);
+								ctx.save();
+								for (let i = 0; i < numSamples - 1; i++) {
+									const val = gradCam[i];
+									if (val > 0.02) {
+										const x1 = getX(i);
+										const x2 = getX(i + 1);
+										ctx.fillStyle = "rgba(220, 38, 38, " + (val * 0.20) + ")";
+										ctx.fillRect(x1, 0, x2 - x1, height);
+									}
+								}
+
+								// Draw Attention Boundary dashed line at 500 samples (2.0s mark)
+								if (signal.length > 500) {
+									const boundaryX = getX(500);
+									ctx.strokeStyle = 'rgba(0, 102, 204, 0.4)';
+									ctx.lineWidth = 1.5;
+									ctx.setLineDash([4, 4]);
+									ctx.beginPath();
+									ctx.moveTo(boundaryX, 0);
+									ctx.lineTo(boundaryX, height);
+									ctx.stroke();
+
+									ctx.fillStyle = '#0066CC';
+									ctx.font = 'bold 9px monospace';
+									ctx.fillText('MODEL ATTENTION WINDOW (2.0s)', boundaryX - 170, 15);
+								}
+								ctx.restore();
+							}
+
+							// Draw traditional heuristic highlight for severity 2 & 3
+							if (severity === 2 || severity === 3) {
+								ctx.save();
+								const startX = getX(750);
+								const endX = getX(1750);
+								ctx.fillStyle = 'rgba(220, 38, 38, 0.04)';
+								ctx.fillRect(startX, 0, endX - startX, height);
+
+								ctx.strokeStyle = 'rgba(220, 38, 38, 0.2)';
+								ctx.lineWidth = 1.2;
+								ctx.setLineDash([5, 4]);
+								ctx.beginPath();
+								ctx.moveTo(startX, 0);
+								ctx.lineTo(startX, height);
+								ctx.moveTo(endX, 0);
+								ctx.lineTo(endX, height);
+								ctx.stroke();
+
+								ctx.fillStyle = '#DC2626';
+								ctx.font = 'bold 9px monospace';
+								ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, 15);
+								ctx.restore();
+							}
+
+							// Draw ECG signal path
+							ctx.beginPath();
+							ctx.strokeStyle = '#0066CC';
+							ctx.lineWidth = 1.5;
+							for (let i = 0; i < signal.length; i++) {
+								const px = getX(i);
+								const py = getY(signal[i]);
+								if (i === 0) {
+									ctx.moveTo(px, py);
+								} else {
+									ctx.lineTo(px, py);
+								}
+							}
+							ctx.stroke();
+
+							// Draw R-peaks annotations
+							if (rPeaks && rPeaks.length > 0) {
+								ctx.fillStyle = '#DC2626';
+								rPeaks.forEach(idx => {
+									if (idx < signal.length) {
+										const px = getX(idx);
+										const py = getY(signal[idx]);
+										ctx.beginPath();
+										ctx.arc(px, py, 4, 0, 2 * Math.PI);
+										ctx.fill();
+									}
+								});
+							}
+						}
+
 						setTimeout(function() {
 							window.print();
 						}, 500);
-					}
+					};
 				</script>
 			</body>
 			</html>

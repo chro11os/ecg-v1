@@ -83,9 +83,8 @@ async def predict_ecg(payload: ECGPayload):
         grad_cam_values = compute_grad_cam(model, x, severity_class)
 
         # 6. Traditional DSP landmark peak detection and interval gating on the full uploaded signal (for frontend rendering)
-        filtered_signal_full = sig.filtfilt(b, a, raw_signal)
-        max_val_filtered = np.max(filtered_signal_full)
-        r_peaks, _ = sig.find_peaks(filtered_signal_full, distance=100, height=max_val_filtered * 0.45)
+        max_val_full = np.max(raw_signal)
+        r_peaks, _ = sig.find_peaks(raw_signal, distance=100, height=max_val_full * 0.45)
         r_peaks_list = r_peaks.tolist()
 
         if len(r_peaks_list) > 1:
