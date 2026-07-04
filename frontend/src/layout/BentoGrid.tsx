@@ -3,7 +3,7 @@ import FileUploadArea from '../components/FileUploadArea';
 
 const BentoGrid = () => {
   const dummyData = {
-    severity: 0 as any,
+    burdenTier: 0 as any,
     confidence: 0,
     burden: 0,
     hardware: "cpu",

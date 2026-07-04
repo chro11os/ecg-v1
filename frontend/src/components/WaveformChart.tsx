@@ -25,12 +25,12 @@ ChartJS.register(
 
 interface Props {
     signal: number[];
-    severity: number;
+    burdenTier: number;
     rPeaks?: number[];
     gradCam?: number[];
 }
 
-const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks, gradCam }) => {
+const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam }) => {
     const chartRef = useRef<any>(null);
 
     const peaksData = new Array(signal.length).fill(null);
@@ -132,8 +132,8 @@ const WaveformChart: React.FC<Props> = ({ signal, severity, rPeaks, gradCam }) =
                 }
             }
 
-            // 2. Draw traditional heuristic highlight for severity 2 & 3
-            const showHeuristicHighlight = severity === 2 || severity === 3;
+            // 2. Draw traditional heuristic highlight for burden tiers 2 & 3
+            const showHeuristicHighlight = burdenTier === 2 || burdenTier === 3;
             if (showHeuristicHighlight) {
                 const startIndex = 750; // 3 seconds
                 const endIndex = 1750;   // 7 seconds

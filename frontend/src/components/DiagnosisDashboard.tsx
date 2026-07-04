@@ -1,37 +1,39 @@
 import React, { useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
-import type { DiagnosisData, SeverityLevel } from "../types";
+import type { DiagnosisData, BurdenTier } from "../types";
 import WaveformChart from "./WaveformChart";
 
 interface Props {
 	data: DiagnosisData;
 	onReset: () => void;
+	patientScans?: any[];
+	activePatient?: any;
 }
 
-const severityMap = {
+const burdenTierMap = {
 	0: {
-		label: "0 - Normal",
+		label: "Sinus Rhythm",
 		color: "text-status-healthy font-extrabold",
 		border: "border-status-healthy",
 		bg: "bg-status-healthy/10",
 		cardHighlight: "bg-status-healthy/5 border border-status-healthy shadow-[0_8px_30px_rgba(22,163,74,0.08)] scale-[1.01] font-bold",
 	},
 	1: {
-		label: "1 - Trace",
+		label: "Micro-Burden / Rare Paroxysm",
 		color: "text-status-info font-extrabold",
 		border: "border-status-info",
 		bg: "bg-status-info/10",
 		cardHighlight: "bg-status-info/5 border border-status-info shadow-[0_8px_30px_rgba(37,99,235,0.08)] scale-[1.01] font-bold",
 	},
 	2: {
-		label: "2 - Mild",
+		label: "Intermediate Burden / Active Paroxysm",
 		color: "text-status-warning font-extrabold",
 		border: "border-status-warning",
 		bg: "bg-status-warning/10",
 		cardHighlight: "bg-status-warning/5 border border-status-warning shadow-[0_8px_30px_rgba(217,119,6,0.08)] scale-[1.01] font-bold",
 	},
 	3: {
-		label: "3 - Severe",
+		label: "High Burden / Persistent AFib",
 		color: "text-status-critical font-extrabold",
 		border: "border-status-critical",
 		bg: "bg-status-critical/10",
@@ -39,15 +41,84 @@ const severityMap = {
 	},
 };
 
-const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
-	const chartRef = useRef<HTMLCanvasElement | null>(null);
-	const severityInfo = severityMap[data.severity];
+const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, activePatient }) => {
+	const gaugeChartRef = useRef<HTMLCanvasElement | null>(null);
+	const trendChartRef = useRef<HTMLCanvasElement | null>(null);
+	const burdenInfo = burdenTierMap[data.burdenTier];
+
+	const getStrokeRiskCategory = (score: number) => {
+		if (score === 0) return { label: "Low Risk", color: "text-status-healthy", rec: "No anticoagulation therapy indicated." };
+		if (score === 1) return { label: "Moderate Risk", color: "text-status-warning", rec: "Oral anticoagulation should be considered based on clinical judgment." };
+		return { label: "High Risk", color: "text-status-critical", rec: "Oral anticoagulation therapy is strongly recommended." };
+	};
+
+	const getCHA2DS2VAScBreakdown = (patient: any) => {
+		const breakdown: { criteria: string; pts: number; active: boolean }[] = [];
+		
+		// CHF
+		breakdown.push({
+			criteria: "Congestive Heart Failure",
+			pts: 1,
+			active: patient.heart_failure === 1
+		});
+		
+		// Hypertension
+		breakdown.push({
+			criteria: "Hypertension History",
+			pts: 1,
+			active: patient.hypertension === 1
+		});
+		
+		// Age >= 75 (2 pts) or 65-74 (1 pt)
+		breakdown.push({
+			criteria: "Age ≥ 75",
+			pts: 2,
+			active: patient.age >= 75
+		});
+		breakdown.push({
+			criteria: "Age 65–74",
+			pts: 1,
+			active: patient.age >= 65 && patient.age < 75
+		});
+		
+		// Diabetes
+		breakdown.push({
+			criteria: "Diabetes Mellitus",
+			pts: 1,
+			active: patient.diabetes === 1
+		});
+		
+		// Stroke
+		breakdown.push({
+			criteria: "Stroke / TIA History",
+			pts: 2,
+			active: patient.stroke_history === 1
+		});
+		
+		// Vascular Disease
+		breakdown.push({
+			criteria: "Vascular Disease",
+			pts: 1,
+			active: patient.vascular_disease === 1
+		});
+		
+		// Gender
+		breakdown.push({
+			criteria: "Sex Category (Female)",
+			pts: 1,
+			active: patient.gender.toLowerCase() === "female" || patient.gender.toLowerCase() === "f"
+		});
+		
+		return breakdown;
+	};
 
 	const exportReport = () => {
-		const patientHash = `MD-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.round(Math.random() * 10000)}`;
+		const patientHash = data.patientId || `MD-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.round(Math.random() * 10000)}`;
 		const timestamp = new Date().toLocaleString();
 		const printWindow = window.open("", "_blank");
 		if (!printWindow) return;
+
+		const riskInfo = data.strokeRiskScore !== undefined ? getStrokeRiskCategory(data.strokeRiskScore) : null;
 
 		const htmlContent = `
 			<!DOCTYPE html>
@@ -110,10 +181,10 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 						font-size: 24px;
 						font-weight: 700;
 					}
-					.severity-badge-0 { color: #16A34A; }
-					.severity-badge-1 { color: #2563EB; }
-					.severity-badge-2 { color: #D97706; }
-					.severity-badge-3 { color: #DC2626; }
+					.burden-badge-0 { color: #16A34A; }
+					.burden-badge-1 { color: #2563EB; }
+					.burden-badge-2 { color: #D97706; }
+					.burden-badge-3 { color: #DC2626; }
 					
 					.signal-strip-container {
 						background: #FFFFFF;
@@ -182,10 +253,10 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 				<div class="header">
 					<div class="title-section">
 						<h1>CLINICAL ECG DIAGNOSTIC REPORT</h1>
-						<p>ATRIAL FIBRILLATION SEVERITY AUTOMATED LANDMARK EVALUATION</p>
+						<p>ATRIAL FIBRILLATION TEMPORAL BURDEN AUTOMATED LANDMARK EVALUATION</p>
 					</div>
 					<div class="meta-ledger">
-						<div>LEDGER HASH: <b>${patientHash}</b></div>
+						<div>PATIENT ID: <b>${patientHash}</b></div>
 						<div>GENERATED: <b>${timestamp}</b></div>
 						<div>HARDWARE BACKEND: <b>${data.hardware.toUpperCase()}</b></div>
 					</div>
@@ -193,11 +264,11 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 
 				<div class="diagnostic-summary">
 					<div class="summary-box">
-						<h3>Severity Status</h3>
-						<p class="severity-badge-${data.severity}">
-							${data.severity === 0 ? 'CLASS 0: NORMAL' :
-							  data.severity === 1 ? 'CLASS 1: TRACE' :
-							  data.severity === 2 ? 'CLASS 2: MILD' : 'CLASS 3: SEVERE'}
+						<h3>Temporal Burden Status</h3>
+						<p class="burden-badge-${data.burdenTier}">
+							${data.burdenTier === 0 ? 'SINUS RHYTHM' :
+							  data.burdenTier === 1 ? 'MICRO-BURDEN / RARE PAROXYSM' :
+							  data.burdenTier === 2 ? 'INTERMEDIATE BURDEN / ACTIVE PAROXYSM' : 'HIGH BURDEN / PERSISTENT AFIB'}
 						</p>
 					</div>
 					<div class="summary-box">
@@ -209,6 +280,49 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 						<p style="color: #16A34A">${data.burden}%</p>
 					</div>
 				</div>
+
+				${riskInfo ? `
+				<div class="diagnostic-summary" style="display: block; margin-bottom: 30px;">
+					<div style="display: flex; gap: 20px;">
+						<div class="summary-box" style="flex: 1;">
+							<h3>CHA₂DS₂-VASc Stroke Risk</h3>
+							<p style="font-size: 20px; margin-bottom: 5px;">Score: <b>${data.strokeRiskScore}</b> (${riskInfo.label})</p>
+							<p style="font-size: 11px; color: #4A5568; margin-top: 5px; line-height: 1.4;">${riskInfo.rec}</p>
+							
+							${activePatient ? `
+							<div style="margin-top: 15px; border-top: 1px dashed #E5E7EB; padding-top: 15px;">
+								<h4 style="margin: 0 0 8px 0; font-size: 10px; text-transform: uppercase; color: #4A5568; letter-spacing: 1px;">Clinical Risk Factor Breakdown</h4>
+								<table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 10px;">
+									<thead>
+										<tr style="border-bottom: 1px solid #E5E7EB; text-align: left; color: #4A5568;">
+											<th style="padding: 4px 0; font-weight: normal;">Criteria</th>
+											<th style="padding: 4px 0; text-align: right; font-weight: normal;">Points</th>
+										</tr>
+									</thead>
+									<tbody>
+										${getCHA2DS2VAScBreakdown(activePatient).map(item => `
+											<tr style="border-bottom: 1px solid #F3F4F6; ${item.active ? 'font-weight: bold; color: #0066CC;' : 'color: #9CA3AF;'}">
+												<td style="padding: 4px 0;">${item.active ? '● ' : '○ '}${item.criteria}</td>
+												<td style="padding: 4px 0; text-align: right;">${item.active ? `+${item.pts}` : '0'}</td>
+											</tr>
+										`).join('')}
+									</tbody>
+								</table>
+							</div>
+							` : ''}
+						</div>
+						<div class="summary-box" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+							<div>
+								<h3>Cumulative Longitudinal Burden</h3>
+								<p style="font-size: 20px; color: #DC2626; margin-bottom: 5px;"><b>${data.cumulativeAFibBurden ?? 0.0}%</b></p>
+							</div>
+							<div style="font-size: 10px; color: #4A5568; font-family: monospace; margin-top: 15px; border-top: 1px dashed #E5E7EB; padding-top: 10px;">
+								Patient's longitudinal burden ratio aggregated over all database scans.
+							</div>
+						</div>
+					</div>
+				</div>
+				` : ''}
 
 				<div class="signal-strip-container">
 					<h3>10-Second Waveform Strip (R-Peaks Annotated)</h3>
@@ -265,7 +379,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 							const signal = ${JSON.stringify(data.rawSignal)};
 							const rPeaks = ${JSON.stringify(data.rPeaks || [])};
 							const gradCam = ${JSON.stringify(data.gradCam || [])};
-							const severity = ${data.severity};
+							const burdenTier = ${data.burdenTier};
 
 							// Clear canvas
 							ctx.fillStyle = '#FFFFFF';
@@ -329,8 +443,8 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 								ctx.restore();
 							}
 
-							// Draw traditional heuristic highlight for severity 2 & 3
-							if (severity === 2 || severity === 3) {
+							// Draw traditional heuristic highlight for burdenTier 2 & 3
+							if (burdenTier === 2 || burdenTier === 3) {
 								ctx.save();
 								const startX = getX(750);
 								const endX = getX(1750);
@@ -397,10 +511,11 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 		printWindow.document.close();
 	};
 
+	// 1. Confidence Gauge Doughnut Chart
 	useEffect(() => {
-		if (!chartRef.current) return;
+		if (!gaugeChartRef.current) return;
 
-		const chart = new Chart(chartRef.current, {
+		const chart = new Chart(gaugeChartRef.current, {
 			type: "doughnut",
 			data: {
 				datasets: [
@@ -426,184 +541,326 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 		};
 	}, [data]);
 
+	// 2. Longitudinal Trend Chart (Line Chart)
+	useEffect(() => {
+		if (!trendChartRef.current) return;
+
+		let chartInstance: Chart | null = null;
+
+		if (patientScans && patientScans.length > 0) {
+			// Sort scans chronologically
+			const sortedScans = [...patientScans].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			
+			const labels = sortedScans.map(s => {
+				const d = new Date(s.timestamp);
+				return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+			});
+
+			const burdenData = sortedScans.map(s => {
+				const tier = s.predicted_class;
+				if (tier === 0) return 0;
+				if (tier === 1) return 4.25;
+				if (tier === 2) return 28.4;
+				return 72.8;
+			});
+
+			chartInstance = new Chart(trendChartRef.current, {
+				type: "line",
+				data: {
+					labels: labels,
+					datasets: [
+						{
+							label: "AFib Burden Trend (%)",
+							data: burdenData,
+							borderColor: "#DC2626",
+							backgroundColor: "rgba(220, 38, 38, 0.08)",
+							borderWidth: 2,
+							tension: 0.35,
+							fill: true,
+							pointRadius: 4,
+							pointBackgroundColor: "#DC2626",
+						}
+					]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					scales: {
+						y: {
+							min: 0,
+							max: 100,
+							ticks: {
+								color: "#4A5568",
+								callback: (value) => `${value}%`
+							},
+							grid: { color: "#E5E7EB" }
+						},
+						x: {
+							ticks: { color: "#4A5568" },
+							grid: { display: false }
+						}
+					},
+					plugins: {
+						legend: { display: false }
+					}
+				}
+			});
+		}
+
+		return () => {
+			if (chartInstance) chartInstance.destroy();
+		};
+	}, [patientScans]);
+
 	return (
-		<div className="w-full text-text-primary transition-colors duration-300">
-			<div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-				<div className="lg:col-span-2 space-y-6">
-					<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
-						<div className="flex items-center justify-between gap-4 flex-wrap">
-							<div>
-								<h1 className="text-3xl font-bold">Diagnosis Dashboard</h1>
-								<p className="text-brand-secondary mt-1">Atrial Fibrillation Severity Analysis</p>
-							</div>
-							<div className="flex items-center gap-4 flex-wrap">
-								<button
-									onClick={exportReport}
-									className="px-4 py-2.5 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
-								>
-									EXPORT REPORT
-								</button>
-								<div className={`px-6 py-3 rounded-none border ${severityInfo.bg} ${severityInfo.border}`}>
-									<p className="text-sm uppercase tracking-wider opacity-85">Severity Status</p>
-									<h2 className={`text-3xl font-bold ${severityInfo.color}`}>
-										{severityInfo.label}
-									</h2>
-								</div>
-							</div>
+		<div className="w-full text-text-primary transition-colors duration-300 space-y-6">
+			{/* Clinical Header Bar */}
+			<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+				<div className="space-y-1">
+					<div className="flex items-center gap-2 flex-wrap">
+						<h1 className="text-2xl font-bold tracking-tight">Diagnosis Dashboard</h1>
+						<span className="text-[10px] font-mono bg-border-subtle text-brand-secondary px-2 py-0.5 uppercase">
+							{data.hardware} • {data.responseTime}ms
+						</span>
+					</div>
+					<p className="text-xs text-brand-secondary font-mono">
+						Atrial Fibrillation Temporal Burden Analysis
+					</p>
+				</div>
+				
+				<div className="flex items-center gap-3 flex-wrap">
+					{/* Status Pill */}
+					<div className={`px-4 py-2 border flex items-center gap-3 ${burdenInfo.bg} ${burdenInfo.border}`}>
+						<div>
+							<p className="text-[9px] uppercase tracking-wider opacity-75 font-mono">Burden Status</p>
+							<p className={`text-base font-bold ${burdenInfo.color}`}>
+								{burdenInfo.label}
+							</p>
+						</div>
+						<div className="border-l border-border-subtle pl-3 text-right">
+							<p className="text-[9px] uppercase tracking-wider opacity-75 font-mono">Confidence</p>
+							<p className="text-base font-bold text-brand-primary">
+								{data.confidence}%
+							</p>
 						</div>
 					</div>
 
-					<div className="lg:col-span-2">
-						<WaveformChart signal={data.rawSignal} severity={data.severity} rPeaks={data.rPeaks} gradCam={data.gradCam} />
-					</div>
+					<button
+						onClick={exportReport}
+						className="px-4 py-3 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+					>
+						EXPORT REPORT
+					</button>
+					
+					<button
+						onClick={onReset}
+						className="px-4 py-3 text-xs font-mono font-bold bg-brand-primary hover:bg-brand-primary/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+					>
+						NEW SCAN
+					</button>
+				</div>
+			</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
-							<div className="flex items-center justify-between mb-4">
-								<div>
-									<h3 className="text-xl font-semibold">Confidence Gauge</h3>
-									<p className="text-brand-secondary text-sm">Softmax Probability</p>
-								</div>
-								<div className="text-right">
-									<p className="text-4xl font-bold text-brand-primary">{data.confidence}%</p>
-								</div>
-							</div>
-							<div className="h-72 flex items-center justify-center">
-								<canvas ref={chartRef}></canvas>
-							</div>
-						</div>
+			{/* Interactive Waveform Strip (Full Width) */}
+			<div className="bg-card-bg border border-border-subtle p-1 shadow-xs">
+				<WaveformChart 
+					signal={data.rawSignal} 
+					burdenTier={data.burdenTier} 
+					rPeaks={data.rPeaks} 
+					gradCam={data.gradCam} 
+				/>
+			</div>
 
-						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs flex flex-col justify-between">
-							<div className="flex items-center justify-between mb-4">
-								<div>
-									<h3 className="text-xl font-semibold">AF Burden Meter</h3>
-									<p className="text-brand-secondary text-sm">Calculated AF Burden</p>
-								</div>
-								<div className="text-right">
-									<p className="text-4xl font-bold text-status-healthy">{data.burden}%</p>
-								</div>
-							</div>
-							<div className="mt-6 flex-1 flex flex-col justify-center">
-								<div className="w-full h-8 bg-border-subtle rounded-none overflow-hidden">
-									<div
-										className="h-full bg-linear-to-r from-status-healthy to-status-warning rounded-none flex items-center justify-end pr-4 font-semibold text-white transition-all duration-500"
-										style={{ width: `${data.burden}%` }}
-									>
-										{data.burden}%
+			{/* Clinical Insights (2 Columns: CDSS and Historical Trend) */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				{/* CHA2DS2-VASc stroke risk card */}
+				<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+					<div>
+						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
+							<h3 className="text-base font-bold uppercase tracking-wider">Stroke Risk Assessment</h3>
+							<span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-none uppercase ${
+								data.strokeRiskScore !== undefined 
+									? 'bg-status-info/10 text-status-info border border-status-info/20' 
+									: 'bg-border-subtle text-brand-secondary border border-border-subtle'
+							}`}>
+								{data.strokeRiskScore !== undefined ? "CDSS Active" : "No Active Patient"}
+							</span>
+						</div>
+						
+						{data.strokeRiskScore !== undefined ? (
+							<div className="space-y-4">
+								<div className="flex justify-between items-center bg-bg-canvas p-4 border border-border-subtle">
+									<div>
+										<p className="text-[10px] font-mono text-brand-secondary uppercase">CHA₂DS₂-VASc Score</p>
+										<p className="text-3xl font-bold mt-0.5">{data.strokeRiskScore} <span className="text-xs font-normal text-brand-secondary">PTS</span></p>
+									</div>
+									<div className="text-right">
+										<p className="text-[10px] font-mono text-brand-secondary uppercase">Risk Tier</p>
+										<p className={`text-lg font-bold mt-0.5 uppercase ${getStrokeRiskCategory(data.strokeRiskScore).color}`}>
+											{getStrokeRiskCategory(data.strokeRiskScore).label}
+										</p>
 									</div>
 								</div>
-								<div className="flex justify-between text-xs text-brand-secondary mt-3">
-									<span>Normal</span>
-									<span>Trace</span>
-									<span>Mild</span>
-									<span>Severe</span>
+								<div className="bg-bg-canvas/50 p-3.5 border border-border-subtle text-xs">
+									<p className="font-bold text-brand-primary uppercase font-mono tracking-wide mb-1">Recommended Therapy:</p>
+									<p className="text-brand-secondary leading-relaxed">{getStrokeRiskCategory(data.strokeRiskScore).rec}</p>
 								</div>
-							</div>
-						</div>
 
-						<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs flex flex-col justify-between">
-							<div className="flex items-center justify-between mb-4">
-								<div>
-									<h3 className="text-xl font-semibold">Landmark DSP</h3>
-									<p className="text-brand-secondary text-sm">Algorithmic Gating</p>
-								</div>
-								<div className="text-right">
-									<p className="text-sm font-mono text-brand-primary font-bold">Peaks: {data.rPeaks?.length ?? 0}</p>
-								</div>
+								{activePatient && (
+									<div className="border border-border-subtle p-3 mt-3 bg-bg-canvas/20">
+										<p className="text-[9px] font-mono text-brand-secondary uppercase mb-2 border-b border-border-subtle pb-1 tracking-wider font-bold">Risk Factor Breakdown:</p>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[9px] font-mono">
+											{getCHA2DS2VAScBreakdown(activePatient).map((item, idx) => (
+												<div key={idx} className={`flex justify-between items-center px-2 py-1 ${
+													item.active 
+														? "bg-brand-primary/10 border border-brand-primary/20 text-brand-primary font-bold" 
+														: "opacity-45 border border-transparent text-brand-secondary/70"
+												}`}>
+													<span>{item.criteria}</span>
+													<span>{item.active ? `+${item.pts} pt` : `0 pts`}</span>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 							</div>
-							<div className="space-y-4 my-2 flex-1 flex flex-col justify-center">
-								<div className="bg-bg-canvas p-3 border border-border-subtle">
-									<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
-										<span>R-R Variance</span>
-										<span className="text-brand-primary font-bold">{data.rrVariance ?? 0.0} ms²</span>
-									</div>
-									<div className="w-full h-1.5 bg-border-subtle">
-										<div 
-											className="h-full bg-brand-primary" 
-											style={{ width: `${Math.min((data.rrVariance ?? 0.0) / 10.0, 100.0)}%` }}
-										/>
-									</div>
-								</div>
-								<div className="bg-bg-canvas p-3 border border-border-subtle">
-									<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
-										<span>RMSSD</span>
-										<span className="text-status-healthy font-bold">{data.rmssd ?? 0.0} ms</span>
-									</div>
-									<div className="w-full h-1.5 bg-border-subtle">
-										<div 
-											className="h-full bg-status-healthy" 
-											style={{ width: `${Math.min((data.rmssd ?? 0.0) / 2.0, 100.0)}%` }}
-										/>
-									</div>
-								</div>
+						) : (
+							<div className="text-center py-10">
+								<p className="text-xs font-mono text-brand-secondary leading-relaxed">
+									Please select or register a patient prior to scan analysis to enable CHA₂DS₂-VASc stroke risk assessment.
+								</p>
 							</div>
-							<div className="text-[10px] font-mono text-brand-secondary tracking-normal mt-2 border-t border-border-subtle pt-2 shrink-0">
-								{data.severity === 0 ? "Sinus rhythm: uniform peak intervals." : 
-								 data.severity === 1 ? "Trace AFib: minor temporal peak jitter." : 
-								 data.severity === 2 ? "Mild AFib: elevated R-R segment variance." : 
-								 "Severe AFib: highly erratic gating landmarks."}
-							</div>
-						</div>
-					</div>
-
-					<div className="rounded-none p-6 bg-card-bg border border-border-subtle shadow-xs">
-						<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-							<div>
-								<h3 className="text-xl font-semibold">Inference Metadata</h3>
-								<p className="text-brand-secondary text-sm">Runtime diagnostics</p>
-							</div>
-							<div className="flex gap-4 flex-wrap">
-								<div className="bg-bg-canvas border border-border-subtle rounded-none px-5 py-4 min-w-45">
-									<p className="text-brand-secondary text-sm">Hardware Used</p>
-									<div className="flex items-center gap-2 mt-1">
-										<span className="w-3.5 h-3.5 bg-status-healthy"></span>
-										<span className="text-lg font-semibold uppercase">{data.hardware}</span>
-									</div>
-								</div>
-								<div className="bg-bg-canvas border border-border-subtle rounded-none px-5 py-4 min-w-45">
-									<p className="text-brand-secondary text-sm">Response Time</p>
-									<div className="flex items-center gap-2 mt-1">
-										<span className="text-lg font-semibold">{data.responseTime} ms</span>
-									</div>
-								</div>
-								<button
-									onClick={onReset}
-									className="bg-brand-primary hover:bg-brand-primary/95 text-white rounded-none px-6 py-4 font-bold transition-colors cursor-pointer"
-								>
-									NEW SCAN
-								</button>
-							</div>
-						</div>
+						)}
 					</div>
 				</div>
 
-				<div className="rounded-none p-6 flex flex-col bg-card-bg border border-border-subtle shadow-xs">
-					<h3 className="text-2xl font-bold mb-6">Severity Classes</h3>
-					<div className="space-y-4">
-						{[0, 1, 2, 3].map((level) => {
-							const current = severityMap[level as SeverityLevel];
-							const isActive = data.severity === level;
-							return (
-								<div
-									key={level}
-									className={`p-4 rounded-none border transition-all duration-300 ${
-										isActive 
-											? current.cardHighlight 
-											: "bg-bg-canvas/50 border-border-subtle/50 opacity-40 hover:opacity-60 scale-98 cursor-default"
-									}`}
-								>
-									<div className="flex justify-between items-center">
-										<span className="font-semibold">{current.label}</span>
-										<span className={current.color}>
-											{level === 0 && "Stable"}
-											{level === 1 && "Low Risk"}
-											{level === 2 && "Moderate"}
-											{level === 3 && "Critical"}
-										</span>
-									</div>
+				{/* Trend Chart Card */}
+				<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+					<div>
+						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
+							<h3 className="text-base font-bold uppercase tracking-wider">Longitudinal AFib Trend</h3>
+							<span className="px-2 py-0.5 text-[9px] font-mono font-bold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 uppercase">
+								{patientScans && patientScans.length > 0 ? `${patientScans.length} Scans` : "0 Scans"}
+							</span>
+						</div>
+						
+						<div className="h-44 relative mt-2">
+							{patientScans && patientScans.length > 0 ? (
+								<canvas ref={trendChartRef}></canvas>
+							) : (
+								<div className="absolute inset-0 flex items-center justify-center text-center">
+									<p className="text-xs font-mono text-brand-secondary leading-relaxed">
+										No historical registry data found. Link scanning sequences to a patient to build longitudinal analytics.
+									</p>
 								</div>
-							);
-						})}
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* DSP Telemetry and Reference (3 Columns) */}
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+				{/* DSP Telemetry Card */}
+				<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+					<div>
+						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
+							<h3 className="text-sm font-bold uppercase tracking-wider">Digital Signal Processing</h3>
+							<span className="text-[10px] font-mono text-brand-secondary">Peaks: {data.rPeaks?.length ?? 0}</span>
+						</div>
+						
+						<div className="space-y-4 my-2">
+							<div className="bg-bg-canvas p-3 border border-border-subtle">
+								<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
+									<span>R-R Variance</span>
+									<span className="text-brand-primary font-bold">{data.rrVariance ?? 0.0} ms²</span>
+								</div>
+								<div className="w-full h-1.5 bg-border-subtle">
+									<div 
+										className="h-full bg-brand-primary" 
+										style={{ width: `${Math.min((data.rrVariance ?? 0.0) / 10.0, 100.0)}%` }}
+									/>
+								</div>
+							</div>
+							<div className="bg-bg-canvas p-3 border border-border-subtle">
+								<div className="flex justify-between text-[11px] font-mono text-brand-secondary mb-1">
+									<span>RMSSD</span>
+									<span className="text-status-healthy font-bold">{data.rmssd ?? 0.0} ms</span>
+								</div>
+								<div className="w-full h-1.5 bg-border-subtle">
+									<div 
+										className="h-full bg-status-healthy" 
+										style={{ width: `${Math.min((data.rmssd ?? 0.0) / 2.0, 100.0)}%` }}
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div className="text-[10px] font-mono text-brand-secondary mt-2 border-t border-border-subtle pt-2">
+						{data.burdenTier === 0 ? "Sinus rhythm: uniform peak intervals." : 
+						 data.burdenTier === 1 ? "Trace AFib: minor temporal peak jitter." : 
+						 data.burdenTier === 2 ? "Mild AFib: elevated R-R segment variance." : 
+						 "Severe AFib: highly erratic gating landmarks."}
+					</div>
+				</div>
+
+				{/* Burden Gauge Card */}
+				<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+					<div>
+						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
+							<h3 className="text-sm font-bold uppercase tracking-wider">AFib Burden Metric</h3>
+							<span className="text-status-healthy font-mono text-xs font-bold">{data.burden}%</span>
+						</div>
+						
+						<div className="mt-4 space-y-4">
+							<div className="w-full h-7 bg-border-subtle rounded-none overflow-hidden relative">
+								<div
+									className="h-full bg-linear-to-r from-status-healthy to-status-warning rounded-none flex items-center justify-end pr-3 font-semibold text-white text-xs transition-all duration-500"
+									style={{ width: `${data.burden}%` }}
+								>
+									{data.burden}%
+								</div>
+							</div>
+							<div className="flex justify-between text-[9px] text-brand-secondary font-mono">
+								<span>Sinus</span>
+								<span>Micro</span>
+								<span>Intermed.</span>
+								<span>High</span>
+							</div>
+						</div>
+					</div>
+					<div className="text-[10px] font-mono text-brand-secondary mt-2 border-t border-border-subtle pt-2">
+						Temporal ratio of AFib rhythm segments over 10.0s recording window.
+					</div>
+				</div>
+
+				{/* Reference Tier Scale Card */}
+				<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex flex-col justify-between">
+					<div>
+						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
+							<h3 className="text-sm font-bold uppercase tracking-wider">AFib Burden Tiers</h3>
+							<span className="text-[10px] font-mono text-brand-secondary">Reference Guide</span>
+						</div>
+						
+						<div className="space-y-2 mt-2">
+							{[0, 1, 2, 3].map((level) => {
+								const current = burdenTierMap[level as BurdenTier];
+								const isActive = data.burdenTier === level;
+								return (
+									<div
+										key={level}
+										className={`p-1.5 border flex justify-between items-center text-[10px] font-mono ${
+											isActive 
+												? `${current.bg} ${current.border} border-l-4 font-bold` 
+												: "bg-transparent border-transparent opacity-50"
+										}`}
+									>
+										<span>{current.label}</span>
+										{isActive && <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 bg-brand-primary text-white font-bold">Active</span>}
+									</div>
+								);
+							})}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -612,4 +869,3 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset }) => {
 };
 
 export default DiagnosisDashboard;
-

@@ -64,3 +64,26 @@ This checklist identifies the gaps between your current implementation and the s
   * Change [server.py](file:///home/chrollos/Documents/ecg-v1/fast_api_backend/server.py) payload verification limit from `2500` to `500` samples.
 * [x] **Frontend Chart Highlight:**
   * Update the frontend [WaveformChart.tsx](file:///home/chrollos/Documents/ecg-v1/frontend/src/components/WaveformChart.tsx) to overlay a heat-map color gradient representing the Grad-CAM activation values, making the model decisions explainable.
+
+---
+
+## 🚀 Rework & Feature Enhancements (July 2026)
+
+### 1. Database & Patient Registration
+* [x] **Auto-Generated Patient IDs:** Database automatically generates and registers a unique ID (format `#XXXX-X`) if none is provided.
+* [x] **Next-ID Preview Endpoint:** Exposed `GET /patients/next-id` to fetch the next candidate ID for previewing in the UI without reserving it until form submission.
+* [x] **UI ID Styling:** Displayed the auto-generated preview in gray text on the registration form and rendered patient IDs in gray text inside the registry sidebar list.
+
+### 2. Multi-Scan Workflow & Patient Targets
+* [x] **Existing Patient Scan Uploads:** Added a file upload area on the main workstation console when a patient target is selected, allowing clinicians to add new scans to existing profiles.
+* [x] **Auto-Close Navigation:** Clicking another patient in the sidebar registry immediately closes the active ECG diagnostic view and focuses on the newly targeted patient.
+* [x] **Anonymous Mode Fallback:** Added a default status banner (`No patient target selected (Anonymous Scan Mode)`) if a scan is run without selecting a profile.
+
+### 3. DSP Telemetry & Load Fixes
+* [x] **JSON Deserialization Fix:** Resolved a `SyntaxError` when loading scans from history by safely checking if the signal and Grad-CAM arrays are already parsed.
+* [x] **Persistent R-Peaks:** Added `r_peaks` column to the `scans` table and updated the backend/frontend pipelines to save and display R-peak markers (red dots) for historical scans.
+* [x] **7-Day Test Suite:** Generated a daily clinical series of 7 ECG JSON files in [`test/7-day-test/`](file:///Users/chrollos/Documents/projects/ecg-v1/test/7-day-test) representing a week of fluctuating paroxysmal AFib burden.
+
+### 4. UI Streamlining & CDSS Enhancements
+* [x] **Streamlined Dashboard Grid:** Removed the right column panel to expand charts to full width and grouped clinical stats into logical rows.
+* [x] **CHA₂DS₂-VASc Risk Breakdown:** Integrated a detailed comorbidity points scoring breakdown checklist inside the Stroke Risk card on both the live dashboard and the exported PDF clinical report.
