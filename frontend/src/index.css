@@ -14,6 +14,33 @@
     --color-status-warning: #D97706;
     --color-status-healthy: #16A34A;
     --color-status-info: #2563EB;
+
+    /* Solid replacements for transparent colors to avoid opacity values */
+    --color-brand-primary-light: #E6F0FA;
+    --color-brand-primary-light-hover: #D9E8F5;
+    --color-brand-primary-light-border: #CCDFF2;
+    --color-brand-primary-hover: #005BB8;
+
+    --color-status-healthy-light: #E7F6EC;
+    --color-status-healthy-light-border: #D0EED9;
+    --color-status-healthy-hover: #149242;
+
+    --color-status-info-light: #E9EFFF;
+    --color-status-info-light-border: #D3E0FF;
+
+    --color-status-warning-light: #FDF1E6;
+    --color-status-warning-light-border: #FCE2CD;
+
+    --color-status-critical-light: #FDF2F2;
+    --color-status-critical-light-border: #FBE2E2;
+    --color-status-critical-hover: #C52222;
+
+    --color-text-secondary-muted: #7F8C9F;
+    --color-text-secondary-dimmed: #A1ADBC;
+    --color-text-secondary-subtle: #E2E8F0;
+
+    --color-bg-canvas-card: #F3F4F6;
+    --color-bg-canvas-card-light: #F9FAFB;
 }
 
 body {

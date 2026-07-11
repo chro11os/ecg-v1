@@ -32,6 +32,9 @@ export default function App() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [selectedPatientScans, setSelectedPatientScans] = useState<any[]>([]);
+    const [patientSearch, setPatientSearch] = useState("");
+    const [patientSort, setPatientSort] = useState<string>("ID_ASC");
+    const [patientScanSort, setPatientScanSort] = useState<string>("NEWEST");
 
     // Register Patient Panel
     const [isRegistering, setIsRegistering] = useState(false);
@@ -50,6 +53,7 @@ export default function App() {
     });
 
     const [previewId, setPreviewId] = useState("");
+    const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
 
     // Scan Filter and Sorting
     const [scanFilter, setScanFilter] = useState<string>("ALL");
@@ -115,12 +119,17 @@ export default function App() {
         e.preventDefault();
         if (!newPatient.name) return;
         try {
-            // 1. Create Patient
-            const response = await fetch("http://localhost:8000/patients", {
-                method: "POST",
+            const url = editingPatientId 
+                ? `http://localhost:8000/patients/${encodeURIComponent(editingPatientId)}`
+                : "http://localhost:8000/patients";
+            const method = editingPatientId ? "PUT" : "POST";
+            
+            // 1. Create or Update Patient
+            const response = await fetch(url, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    id: previewId,
+                    id: editingPatientId ? editingPatientId : previewId,
                     name: newPatient.name,
                     age: Number(newPatient.age),
                     gender: newPatient.gender,
@@ -134,14 +143,15 @@ export default function App() {
             if (response.ok) {
                 await fetchPatients();
                 
-                // 2. Run prediction if signal was uploaded
-                if (tempSignal) {
+                // 2. Run prediction if signal was uploaded (only relevant for new registrations)
+                if (!editingPatientId && tempSignal) {
                     setSelectedPatientId(previewId);
                     await handleAnalysis(tempSignal, tempFileName, previewId);
                 }
                 
                 // Reset states
                 setIsRegistering(false);
+                setEditingPatientId(null);
                 setTempSignal(null);
                 setTempFileName("");
                 setNewPatient({
@@ -157,8 +167,70 @@ export default function App() {
                 });
             }
         } catch (err) {
-            console.error("Error registering patient:", err);
+            console.error("Error saving patient:", err);
         }
+    };
+
+    const deletePatient = async (patientId: string) => {
+        if (!window.confirm(`Are you sure you want to delete patient ${patientId}? This will delete all their ECG scan history.`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:8000/patients/${encodeURIComponent(patientId)}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                await fetchPatients();
+                if (selectedPatientId === patientId) {
+                    setSelectedPatientId(null);
+                    setDiagnosis(null);
+                }
+            } else {
+                const errData = await res.json();
+                alert(`Error deleting patient: ${errData.detail}`);
+            }
+        } catch (err) {
+            console.error("Error deleting patient:", err);
+        }
+    };
+
+    const deleteScan = async (scanId: number, patientId: string) => {
+        if (!window.confirm(`Are you sure you want to delete scan record #${scanId}?`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:8000/scans/${scanId}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                await fetchPatientHistory(patientId);
+                await fetchPatients(); // update cumulative stats on patient card
+                if (diagnosis && (diagnosis as any).id === scanId) {
+                    setDiagnosis(null);
+                }
+            } else {
+                const errData = await res.json();
+                alert(`Error deleting scan: ${errData.detail}`);
+            }
+        } catch (err) {
+            console.error("Error deleting scan:", err);
+        }
+    };
+
+    const startEditingPatient = (patient: Patient) => {
+        setEditingPatientId(patient.id);
+        setIsRegistering(true);
+        setNewPatient({
+            id: patient.id,
+            name: patient.name,
+            age: patient.age,
+            gender: patient.gender,
+            hypertension: patient.hypertension === 1,
+            diabetes: patient.diabetes === 1,
+            stroke_history: patient.stroke_history === 1,
+            vascular_disease: patient.vascular_disease === 1,
+            heart_failure: patient.heart_failure === 1,
+        });
     };
 
     const handleAnalysis = async (incomingSignal: number[], fileName: string, overridePatientId?: string) => {
@@ -281,7 +353,7 @@ export default function App() {
                     <h2 className="text-lg font-bold font-mono tracking-wide text-text-primary">ECG REGISTRY</h2>
                     <button 
                         onClick={() => setDiagnosis(null)}
-                        className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/20 rounded-none cursor-pointer active:scale-95"
+                        className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary-light hover:bg-brand-primary-light-border text-brand-primary border border-brand-primary-light-border rounded-none cursor-pointer active:scale-95"
                     >
                         HELP
                     </button>
@@ -316,10 +388,31 @@ export default function App() {
                         <div className="space-y-3">
                             {/* New Patient Registration Trigger */}
                             <button
-                                onClick={() => setIsRegistering(!isRegistering)}
-                                className="w-full py-2 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/15 border border-brand-primary/20 text-[11px] font-mono font-bold transition-all cursor-pointer rounded-none active:scale-[0.98]"
+                                onClick={() => {
+                                    if (isRegistering) {
+                                        setIsRegistering(false);
+                                        setEditingPatientId(null);
+                                        setNewPatient({
+                                            id: "",
+                                            name: "",
+                                            age: 65,
+                                            gender: "male",
+                                            hypertension: false,
+                                            diabetes: false,
+                                            stroke_history: false,
+                                            vascular_disease: false,
+                                            heart_failure: false,
+                                        });
+                                    } else {
+                                        setIsRegistering(true);
+                                    }
+                                }}
+                                className="w-full py-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary-light-hover border border-brand-primary-light-border text-[11px] font-mono font-bold transition-all cursor-pointer rounded-none active:scale-[0.98]"
                             >
-                                {isRegistering ? "✕ CANCEL REGISTRATION" : "＋ REGISTER NEW PATIENT"}
+                                {isRegistering 
+                                    ? (editingPatientId ? "✕ CANCEL EDIT" : "✕ CANCEL REGISTRATION") 
+                                    : "＋ REGISTER NEW PATIENT"
+                                }
                             </button>
 
                             {isRegistering && (
@@ -327,7 +420,7 @@ export default function App() {
                                     <div>
                                         <label className="block text-[9px] font-mono text-brand-secondary uppercase">Patient ID</label>
                                         <div className="w-full bg-bg-canvas border border-border-subtle text-xs p-1.5 mt-0.5 rounded-none font-mono text-zinc-500 select-none">
-                                            {previewId || "Fetching ID..."} <span className="opacity-60 italic text-[10px]">(Preview)</span>
+                                            {editingPatientId ? editingPatientId : (previewId || "Fetching ID...")} {!editingPatientId && <span className="opacity-60 italic text-[10px]">(Preview)</span>}
                                         </div>
                                     </div>
                                     <div>
@@ -394,32 +487,92 @@ export default function App() {
                                     </div>
 
                                     {/* File upload section inside patient creation */}
-                                    <div className="border-t border-border-subtle pt-2 mt-1 space-y-1">
-                                        <p className="text-[9px] font-mono text-brand-secondary uppercase font-bold">ECG Baseline Data (2,500 samples)</p>
-                                        <FileUploadArea
-                                            onDataLoaded={(signal, name) => {
-                                                setTempSignal(signal);
-                                                setTempFileName(name);
-                                            }}
-                                            onError={(msg) => alert(msg)}
-                                        />
-                                        {tempSignal && (
-                                            <p className="text-[10px] text-status-healthy font-mono font-bold mt-1">
-                                                ✓ ECG File Loaded: {tempFileName}
-                                            </p>
-                                        )}
-                                    </div>
+                                    {!editingPatientId && (
+                                        <div className="border-t border-border-subtle pt-2 mt-1 space-y-1">
+                                            <p className="text-[9px] font-mono text-brand-secondary uppercase font-bold">ECG Baseline Data (2,500 samples)</p>
+                                            <FileUploadArea
+                                                onDataLoaded={(signal, name) => {
+                                                    setTempSignal(signal);
+                                                    setTempFileName(name);
+                                                }}
+                                                onError={(msg) => alert(msg)}
+                                            />
+                                            {tempSignal && (
+                                                <p className="text-[10px] text-status-healthy font-mono font-bold mt-1">
+                                                    ✓ ECG File Loaded: {tempFileName}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <button
                                         type="submit"
-                                        className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy/90 text-[10.5px] font-mono font-bold rounded-none cursor-pointer"
+                                        className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy-hover text-[10.5px] font-mono font-bold rounded-none cursor-pointer"
                                     >
-                                        SUBMIT PROFILE & RUN ECG
+                                        {editingPatientId ? "SAVE PATIENT CHANGES" : "SUBMIT PROFILE & RUN ECG"}
                                     </button>
                                 </form>
                             )}
 
-                            {patients.map((patient) => {
+                            <div className="space-y-2">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={patientSearch}
+                                        onChange={(e) => setPatientSearch(e.target.value)}
+                                        placeholder="SEARCH PATIENT (BY ID OR NAME)..."
+                                        className="w-full bg-card-bg border border-border-subtle text-[10px] font-mono p-2 pr-8 rounded-none uppercase placeholder:text-brand-secondary-dimmed focus:border-brand-primary focus:outline-none"
+                                    />
+                                    {patientSearch && (
+                                        <button
+                                            onClick={() => setPatientSearch("")}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-secondary-muted hover:text-brand-primary text-xs cursor-pointer"
+                                            title="Clear search"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <label className="text-[8px] font-mono text-brand-secondary uppercase select-none font-bold">Sort Patients:</label>
+                                    <select
+                                        value={patientSort}
+                                        onChange={e => setPatientSort(e.target.value)}
+                                        className="bg-bg-canvas border border-border-subtle text-[9px] p-1 rounded-none font-mono text-text-primary cursor-pointer font-bold w-48 text-right focus:outline-none focus:border-brand-primary/50"
+                                    >
+                                        <option value="ID_ASC">ID (A→Z)</option>
+                                        <option value="NAME_ASC">NAME (A→Z)</option>
+                                        <option value="RISK_DESC">STROKE RISK (HIGH→LOW)</option>
+                                        <option value="BURDEN_DESC">CUMULATIVE BURDEN (HIGH→LOW)</option>
+                                        <option value="AGE_DESC">AGE (HIGH→LOW)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {patients
+                                .filter(patient => 
+                                    patient.id.toLowerCase().includes(patientSearch.toLowerCase()) ||
+                                    patient.name.toLowerCase().includes(patientSearch.toLowerCase())
+                                )
+                                .sort((a, b) => {
+                                    if (patientSort === "ID_ASC") {
+                                        return a.id.localeCompare(b.id);
+                                    }
+                                    if (patientSort === "NAME_ASC") {
+                                        return a.name.localeCompare(b.name);
+                                    }
+                                    if (patientSort === "RISK_DESC") {
+                                        return (b.stroke_risk_score ?? 0) - (a.stroke_risk_score ?? 0);
+                                    }
+                                    if (patientSort === "BURDEN_DESC") {
+                                        return (b.cumulative_burden ?? 0) - (a.cumulative_burden ?? 0);
+                                    }
+                                    if (patientSort === "AGE_DESC") {
+                                        return b.age - a.age;
+                                    }
+                                    return 0;
+                                })
+                                .map((patient) => {
                                 const isExpanded = selectedPatientId === patient.id;
                                 return (
                                     <div 
@@ -447,37 +600,96 @@ export default function App() {
                                         {isExpanded && (
                                             <div className="mt-3 border-t border-border-subtle pt-2 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                                                 {/* Clinical Summary snippet in patient registry */}
-                                                <div className="p-2 bg-bg-canvas/50 border border-border-subtle font-mono text-[9px] text-brand-secondary space-y-1">
+                                                <div className="p-2 bg-bg-canvas-card border border-border-subtle font-mono text-[9px] text-brand-secondary space-y-1">
                                                     <div>STROKE RISK: <span className="font-bold text-brand-primary">{patient.stroke_risk_score} PTS</span></div>
                                                     <div>CUMULATIVE BURDEN: <span className="font-bold text-status-critical">{patient.cumulative_burden ?? 0.0}%</span></div>
                                                 </div>
 
-                                                <p className="text-[9px] font-mono font-bold text-brand-secondary uppercase mt-2">Scan Logs:</p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => startEditingPatient(patient)}
+                                                        className="flex-1 py-1.5 bg-brand-primary-light hover:bg-brand-primary-light-hover text-brand-primary border border-brand-primary-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
+                                                    >
+                                                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                        </svg>
+                                                        EDIT PROFILE
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deletePatient(patient.id)}
+                                                        className="flex-1 py-1.5 bg-status-critical-light hover:bg-status-critical-light-border text-status-critical border border-status-critical-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
+                                                    >
+                                                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        DELETE PATIENT
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mt-2 pb-1 border-b border-border-subtle">
+                                                    <p className="text-[9px] font-mono font-bold text-brand-secondary uppercase">Scan Logs:</p>
+                                                    <select
+                                                        value={patientScanSort}
+                                                        onChange={e => setPatientScanSort(e.target.value)}
+                                                        className="bg-transparent text-brand-secondary text-[8px] font-mono cursor-pointer border-none focus:outline-none font-bold"
+                                                    >
+                                                        <option value="NEWEST">NEWEST FIRST</option>
+                                                        <option value="OLDEST">OLDEST FIRST</option>
+                                                        <option value="BURDEN_DESC">BURDEN (HIGH→LOW)</option>
+                                                    </select>
+                                                </div>
                                                 {selectedPatientScans.length === 0 ? (
-                                                    <p className="text-[9px] font-mono text-brand-secondary/60 text-center py-2">NO UPLOADED SCANS</p>
+                                                    <p className="text-[9px] font-mono text-brand-secondary-muted text-center py-2">NO UPLOADED SCANS</p>
                                                 ) : (
-                                                    selectedPatientScans.map((scan) => (
+                                                    [...selectedPatientScans]
+                                                        .sort((a, b) => {
+                                                            if (patientScanSort === "NEWEST") {
+                                                                return b.timestamp.localeCompare(a.timestamp);
+                                                            }
+                                                            if (patientScanSort === "OLDEST") {
+                                                                return a.timestamp.localeCompare(b.timestamp);
+                                                            }
+                                                            if (patientScanSort === "BURDEN_DESC") {
+                                                                return b.predicted_class - a.predicted_class;
+                                                            }
+                                                            return 0;
+                                                        })
+                                                        .map((scan) => (
                                                         <div 
                                                             key={scan.id}
                                                             onClick={() => loadPatientScan(scan)}
-                                                            className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary/50 cursor-pointer transition-all duration-150 hover:translate-x-1"
+                                                            className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary cursor-pointer transition-all duration-150 hover:translate-x-1"
                                                         >
                                                             <div className="flex justify-between items-center text-[10px] font-mono">
                                                                 <span className="font-bold text-brand-secondary">Scan #{scan.id}</span>
-                                                                <span className="text-brand-secondary/60 text-[8px]">{scan.timestamp.split(" ")[0]}</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-brand-secondary-muted text-[8px]">{scan.timestamp.split(" ")[0]}</span>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            deleteScan(scan.id, patient.id);
+                                                                        }}
+                                                                        className="text-status-critical hover:text-status-critical-hover transition-colors p-0.5 hover:bg-status-critical-light flex items-center justify-center cursor-pointer"
+                                                                        title="Delete Scan"
+                                                                    >
+                                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                             <div className="flex justify-between items-center mt-2">
                                                                 <span className={`px-1.5 py-0.2 text-[8px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                                                    scan.predicted_class === 0 ? 'bg-status-healthy/10 text-status-healthy border border-status-healthy/20' :
-                                                                    scan.predicted_class === 1 ? 'bg-status-info/10 text-status-info border border-status-info/20' :
-                                                                    scan.predicted_class === 2 ? 'bg-status-warning/10 text-status-warning border border-status-warning/20' :
-                                                                    'bg-status-critical/10 text-status-critical border border-status-critical/20'
+                                                                    scan.predicted_class === 0 ? 'bg-status-healthy-light text-status-healthy border border-status-healthy-light-border' :
+                                                                    scan.predicted_class === 1 ? 'bg-status-info-light text-status-info border border-status-info-light-border' :
+                                                                    scan.predicted_class === 2 ? 'bg-status-warning-light text-status-warning border border-status-warning-light-border' :
+                                                                    'bg-status-critical-light text-status-critical border border-status-critical-light-border'
                                                                 }`}>
                                                                     {scan.predicted_class === 0 ? 'Sinus Rhythm' :
                                                                      scan.predicted_class === 1 ? 'Micro' :
                                                                      scan.predicted_class === 2 ? 'Intermed.' : 'High'}
                                                                 </span>
-                                                                <span className="text-[9px] font-mono text-brand-secondary/80">{Math.round(scan.confidence * 100)}% CONF</span>
+                                                                <span className="text-[9px] font-mono text-brand-secondary">{Math.round(scan.confidence * 100)}% CONF</span>
                                                             </div>
                                                         </div>
                                                     ))
@@ -491,7 +703,7 @@ export default function App() {
                     ) : (
                         <div className="space-y-3">
                             {/* Filter and Sort Toolbar */}
-                            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-border-subtle/50 mb-2">
+                            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-border-subtle mb-2">
                                 <div>
                                     <label className="block text-[8px] font-mono text-brand-secondary uppercase mb-0.5">Filter Type</label>
                                     <select
@@ -558,23 +770,23 @@ export default function App() {
                                     <div
                                         key={item.id}
                                         onClick={() => loadHistoryItem(item)}
-                                        className="p-4 rounded-none bg-bg-canvas border border-border-subtle hover:border-brand-primary/50 hover:bg-card-bg cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-xs hover:shadow-[0_4px_16px_rgba(0,102,204,0.06)]"
+                                        className="p-4 rounded-none bg-bg-canvas border border-border-subtle hover:border-brand-primary hover:bg-card-bg cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-xs hover:shadow-md"
                                     >
                                         <div className="flex justify-between items-start gap-2 mb-2">
                                             <span className="text-xs font-mono font-bold truncate max-w-40 text-text-primary">
                                                 {item.fileName}
                                             </span>
-                                            <span className="text-[9px] font-mono text-brand-secondary/60 shrink-0 mt-0.5">
+                                            <span className="text-[9px] font-mono text-brand-secondary-muted shrink-0 mt-0.5">
                                                 {item.timestamp}
                                             </span>
                                         </div>
 
                                         <div className="flex justify-between items-center mt-3">
                                             <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                                item.burdenTier === 0 ? 'bg-status-healthy/10 text-status-healthy border border-status-healthy/20' :
-                                                item.burdenTier === 1 ? 'bg-status-info/10 text-status-info border border-status-info/20' :
-                                                item.burdenTier === 2 ? 'bg-status-warning/10 text-status-warning border border-status-warning/20' :
-                                                'bg-status-critical/10 text-status-critical border border-status-critical/20'
+                                                item.burdenTier === 0 ? 'bg-status-healthy-light text-status-healthy border border-status-healthy-light-border' :
+                                                item.burdenTier === 1 ? 'bg-status-info-light text-status-info border border-status-info-light-border' :
+                                                item.burdenTier === 2 ? 'bg-status-warning-light text-status-warning border border-status-warning-light-border' :
+                                                'bg-status-critical-light text-status-critical border border-status-critical-light-border'
                                             }`}>
                                                 {item.burdenTier === 0 ? 'Sinus Rhythm' :
                                                  item.burdenTier === 1 ? 'Micro' :
@@ -608,7 +820,7 @@ export default function App() {
                                     </p>
                                 </div>
                                 
-                                <div className="w-full max-w-md border border-border-subtle p-6 bg-bg-canvas/50">
+                                <div className="w-full max-w-md border border-border-subtle p-6 bg-bg-canvas-card">
                                     <FileUploadArea
                                         onDataLoaded={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
                                         onError={(msg) => alert(msg)}
@@ -624,7 +836,7 @@ export default function App() {
                     ) : (
                         <div className="w-full flex-1 flex flex-col animate-in fade-in duration-300">
                             <div className="flex-1 border border-border-subtle p-8 bg-card-bg shadow-sm flex flex-col justify-center items-center space-y-6">
-                                <div className="w-16 h-16 bg-brand-primary/10 border border-brand-primary/20 rounded-none flex items-center justify-center mx-auto text-brand-primary text-xl font-bold font-mono">
+                                <div className="w-16 h-16 bg-brand-primary-light border border-brand-primary-light-border rounded-none flex items-center justify-center mx-auto text-brand-primary text-xl font-bold font-mono">
                                     ECG
                                 </div>
                                 <div className="text-center space-y-2">

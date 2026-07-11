@@ -65,9 +65,9 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
     });
 
     const getBorderClass = () => {
-        if (preparedSignal) return 'border-status-healthy bg-status-healthy/5 shadow-[0_4px_20px_rgba(22,163,74,0.06)] border-solid';
-        if (isDragActive) return 'border-brand-primary bg-brand-primary/5 animate-pulse';
-        return 'border-border-subtle bg-card-bg shadow-xs hover:border-brand-primary/50 hover:bg-bg-canvas';
+        if (preparedSignal) return 'border-status-healthy bg-status-healthy-light shadow-sm border-solid';
+        if (isDragActive) return 'border-brand-primary bg-brand-primary-light animate-pulse';
+        return 'border-border-subtle bg-card-bg shadow-xs hover:border-brand-primary-hover hover:bg-bg-canvas';
     };
 
     const getTextColorClass = () => {
@@ -88,7 +88,7 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
                             <span className="text-status-healthy font-bold tracking-wider text-base">
                                 READY: {fileName}
                             </span>
-                            <span className="text-xs text-brand-secondary/80 font-mono tracking-normal">
+                            <span className="text-xs text-brand-secondary font-mono tracking-normal">
                                 (2,500 samples parsed successfully)
                             </span>
                         </div>
@@ -109,7 +109,7 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
             {preparedSignal && fileName && (
                 <button
                     onClick={() => onDataLoaded(preparedSignal, fileName)}
-                    className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-mono font-bold rounded-none transition-all duration-300 tracking-wider animate-in fade-in slide-in-from-bottom-2 shadow-md hover:shadow-lg shadow-brand-primary/10 hover:shadow-brand-primary/20 active:scale-[0.99] cursor-pointer"
+                    className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-hover text-white font-mono font-bold rounded-none transition-all duration-300 tracking-wider animate-in fade-in slide-in-from-bottom-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
                 >
                     PROCESS ECG SIGNAL
                 </button>

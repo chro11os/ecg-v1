@@ -107,8 +107,11 @@ const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam })
                     const val = gradCam[i]; // value scaled between [0, 1]
 
                     if (val > 0.02) {
-                        // Soft transparent red overlay for attention areas
-                        ctx.fillStyle = `rgba(220, 38, 38, ${val * 0.25})`;
+                        // Interpolate solid red on white canvas background to avoid alpha transparency
+                        const r = Math.round(255 - 35 * val);
+                        const g = Math.round(255 - 217 * val);
+                        const b = Math.round(255 - 217 * val);
+                        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
                         ctx.fillRect(x1, top, x2 - x1, bottom - top);
                     }
                 }
@@ -117,7 +120,7 @@ const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam })
                 const boundaryIndex = 500;
                 if (chart.data.labels[boundaryIndex]) {
                     const boundaryX = x.getPixelForValue(chart.data.labels[boundaryIndex]);
-                    ctx.strokeStyle = 'rgba(0, 102, 204, 0.4)';
+                    ctx.strokeStyle = '#99C2EC'; // Solid equivalent of 40% blue on white
                     ctx.lineWidth = 1.5;
                     ctx.setLineDash([4, 4]);
                     ctx.beginPath();
@@ -142,12 +145,12 @@ const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam })
                     const startX = x.getPixelForValue(chart.data.labels[startIndex]);
                     const endX = x.getPixelForValue(chart.data.labels[endIndex]);
 
-                    // Soft semi-transparent red overlay for heuristic region
-                    ctx.fillStyle = 'rgba(220, 38, 38, 0.04)';
+                    // Soft solid red overlay for heuristic region (equivalent to 4% red on white)
+                    ctx.fillStyle = '#FEF6F6';
                     ctx.fillRect(startX, top, endX - startX, bottom - top);
 
-                    // structural dashed boundary lines
-                    ctx.strokeStyle = 'rgba(220, 38, 38, 0.2)';
+                    // structural dashed boundary lines (equivalent to 20% red on white)
+                    ctx.strokeStyle = '#F8D4D4';
                     ctx.lineWidth = 1.2;
                     ctx.setLineDash([5, 4]);
                     ctx.beginPath();
@@ -192,7 +195,7 @@ const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam })
                     </button>
                     <button 
                         onClick={resetChartZoom}
-                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-status-critical/10 hover:bg-status-critical/20 text-status-critical border border-status-critical/20 rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-mono font-semibold bg-status-critical-light hover:bg-status-critical-light-border text-status-critical border border-status-critical-light-border rounded-none transition-all duration-200 active:scale-95 shadow-xs cursor-pointer"
                     >
                         Reset Zoom
                     </button>

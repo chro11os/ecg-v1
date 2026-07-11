@@ -15,29 +15,29 @@ const burdenTierMap = {
 		label: "Sinus Rhythm",
 		color: "text-status-healthy font-extrabold",
 		border: "border-status-healthy",
-		bg: "bg-status-healthy/10",
-		cardHighlight: "bg-status-healthy/5 border border-status-healthy shadow-[0_8px_30px_rgba(22,163,74,0.08)] scale-[1.01] font-bold",
+		bg: "bg-status-healthy-light",
+		cardHighlight: "bg-status-healthy-light border border-status-healthy shadow-md scale-[1.01] font-bold",
 	},
 	1: {
 		label: "Micro-Burden / Rare Paroxysm",
 		color: "text-status-info font-extrabold",
 		border: "border-status-info",
-		bg: "bg-status-info/10",
-		cardHighlight: "bg-status-info/5 border border-status-info shadow-[0_8px_30px_rgba(37,99,235,0.08)] scale-[1.01] font-bold",
+		bg: "bg-status-info-light",
+		cardHighlight: "bg-status-info-light border border-status-info shadow-md scale-[1.01] font-bold",
 	},
 	2: {
 		label: "Intermediate Burden / Active Paroxysm",
 		color: "text-status-warning font-extrabold",
 		border: "border-status-warning",
-		bg: "bg-status-warning/10",
-		cardHighlight: "bg-status-warning/5 border border-status-warning shadow-[0_8px_30px_rgba(217,119,6,0.08)] scale-[1.01] font-bold",
+		bg: "bg-status-warning-light",
+		cardHighlight: "bg-status-warning-light border border-status-warning shadow-md scale-[1.01] font-bold",
 	},
 	3: {
 		label: "High Burden / Persistent AFib",
 		color: "text-status-critical font-extrabold",
 		border: "border-status-critical",
-		bg: "bg-status-critical/10",
-		cardHighlight: "bg-status-critical/5 border border-status-critical shadow-[0_8px_30px_rgba(220,38,38,0.08)] scale-[1.01] font-bold",
+		bg: "bg-status-critical-light",
+		cardHighlight: "bg-status-critical-light border border-status-critical shadow-md scale-[1.01] font-bold",
 	},
 };
 
@@ -638,7 +638,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 							</p>
 						</div>
 						<div className="border-l border-border-subtle pl-3 text-right">
-							<p className="text-[9px] uppercase tracking-wider opacity-75 font-mono">Confidence</p>
+							<p className="text-[9px] uppercase tracking-wider text-text-secondary-muted font-mono">Confidence</p>
 							<p className="text-base font-bold text-brand-primary">
 								{data.confidence}%
 							</p>
@@ -647,14 +647,14 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 
 					<button
 						onClick={exportReport}
-						className="px-4 py-3 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+						className="px-4 py-3 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
 					>
 						EXPORT REPORT
 					</button>
 					
 					<button
 						onClick={onReset}
-						className="px-4 py-3 text-xs font-mono font-bold bg-brand-primary hover:bg-brand-primary/90 text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+						className="px-4 py-3 text-xs font-mono font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
 					>
 						NEW SCAN
 					</button>
@@ -680,7 +680,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 							<h3 className="text-base font-bold uppercase tracking-wider">Stroke Risk Assessment</h3>
 							<span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-none uppercase ${
 								data.strokeRiskScore !== undefined 
-									? 'bg-status-info/10 text-status-info border border-status-info/20' 
+									? 'bg-status-info-light text-status-info border border-status-info-light-border' 
 									: 'bg-border-subtle text-brand-secondary border border-border-subtle'
 							}`}>
 								{data.strokeRiskScore !== undefined ? "CDSS Active" : "No Active Patient"}
@@ -701,20 +701,20 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 										</p>
 									</div>
 								</div>
-								<div className="bg-bg-canvas/50 p-3.5 border border-border-subtle text-xs">
+								<div className="bg-bg-canvas-card p-3.5 border border-border-subtle text-xs">
 									<p className="font-bold text-brand-primary uppercase font-mono tracking-wide mb-1">Recommended Therapy:</p>
 									<p className="text-brand-secondary leading-relaxed">{getStrokeRiskCategory(data.strokeRiskScore).rec}</p>
 								</div>
 
 								{activePatient && (
-									<div className="border border-border-subtle p-3 mt-3 bg-bg-canvas/20">
+									<div className="border border-border-subtle p-3 mt-3 bg-bg-canvas-card-light">
 										<p className="text-[9px] font-mono text-brand-secondary uppercase mb-2 border-b border-border-subtle pb-1 tracking-wider font-bold">Risk Factor Breakdown:</p>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[9px] font-mono">
 											{getCHA2DS2VAScBreakdown(activePatient).map((item, idx) => (
 												<div key={idx} className={`flex justify-between items-center px-2 py-1 ${
 													item.active 
-														? "bg-brand-primary/10 border border-brand-primary/20 text-brand-primary font-bold" 
-														: "opacity-45 border border-transparent text-brand-secondary/70"
+														? "bg-brand-primary-light border border-brand-primary-light-border text-brand-primary font-bold" 
+														: "border border-transparent text-text-secondary-muted"
 												}`}>
 													<span>{item.criteria}</span>
 													<span>{item.active ? `+${item.pts} pt` : `0 pts`}</span>
@@ -739,7 +739,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 					<div>
 						<div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-2">
 							<h3 className="text-base font-bold uppercase tracking-wider">Longitudinal AFib Trend</h3>
-							<span className="px-2 py-0.5 text-[9px] font-mono font-bold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 uppercase">
+							<span className="px-2 py-0.5 text-[9px] font-mono font-bold bg-brand-primary-light text-brand-primary border border-brand-primary-light-border uppercase">
 								{patientScans && patientScans.length > 0 ? `${patientScans.length} Scans` : "0 Scans"}
 							</span>
 						</div>
