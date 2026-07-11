@@ -168,7 +168,7 @@ def train_balanced():
     # Synchronize weights to fast_api_backend
     try:
         import shutil
-        backend_path = os.path.abspath(os.path.join(project_root, "fast_api_backend", "afib_cnn_lstm_v1.pt"))
+        backend_path = os.path.abspath(os.path.join(project_root, "backend", "afib_cnn_lstm_v1.pt"))
         if os.path.abspath(save_path) != os.path.abspath(backend_path):
             shutil.copy2(save_path, backend_path)
             print(f"Sync: Successfully copied to backend at {backend_path}")

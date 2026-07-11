@@ -1,9 +1,9 @@
 import sqlite3
 import os
+import sys
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ecg_records.db")
-
-from database import init_db
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from backend.app.database import init_db, DB_PATH
 
 def seed():
     init_db()

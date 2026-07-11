@@ -29,7 +29,7 @@ Visual Heatmap Overlay <── 1D Grad-CAM Map <── CNN-LSTM Inference & Clas
   * `train_balanced.py`: Prepares stratified splits, balances classes, and trains the model.
   * `evaluate_test_split.py`: Validates model weights against the test split.
   * `export_perfect_demo_samples.py`: Extracts verified patient recordings for GUI testing.
-* **`fast_api_backend/`**: REST API backend.
+* **`backend/`**: REST API backend.
   * `server.py`: Runs uvicorn web server, performs signal preprocessing, runs model inference, and calculates Grad-CAM.
   * `afib_cnn_lstm_v1.pt`: Trained model weights dictionary.
 * **`frontend/`**: React/TypeScript dashboard.
@@ -83,7 +83,7 @@ cd frontend && npm install
 ### Run the Application (Dashboard & Server)
 1. **Start the API Server (Root Directory):**
    ```bash
-   uvicorn fast_api_backend.server:app --port 8000 --host 0.0.0.0
+   uvicorn backend.server:app --port 8000 --host 0.0.0.0
    ```
 2. **Start the Frontend Client (`frontend/` Directory):**
    ```bash

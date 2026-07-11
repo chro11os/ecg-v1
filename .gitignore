@@ -44,3 +44,7 @@ ehthumbs.db
 
 # Generated metadata cache
 /ml_pipeline/metadata_cache.json
+
+# Local logs and Thesis PDF
+*.log
+/Thesis_Paper.pdf

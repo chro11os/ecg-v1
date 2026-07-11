@@ -63,7 +63,7 @@ npm install
 #### Start the Backend Server:
 From the project root directory, run:
 ```bash
-uvicorn fast_api_backend.server:app --port 8000 --host 0.0.0.0
+uvicorn backend.server:app --port 8000 --host 0.0.0.0
 ```
 This starts the FastAPI server. It will load the trained weights file (`afib_cnn_lstm_v1.pt`) and automatically run on your GPU if ROCm (AMD) or MPS (Apple Silicon) is available, falling back to CPU if not.
 

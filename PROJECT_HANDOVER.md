@@ -49,10 +49,10 @@ This document serves as the project state memory file. If the AI agent is reset 
 * **Weights Distribution**: Weights saved to `afib_cnn_lstm_v1.pt` and synchronized to:
   * Root folder: [/afib_cnn_lstm_v1.pt](file:///home/chrollos/Documents/ecg-v1/afib_cnn_lstm_v1.pt)
   * Training folder: [/ml_pipeline/afib_cnn_lstm_v1.pt](file:///home/chrollos/Documents/ecg-v1/ml_pipeline/afib_cnn_lstm_v1.pt)
-  * Backend API folder: [/fast_api_backend/afib_cnn_lstm_v1.pt](file:///home/chrollos/Documents/ecg-v1/fast_api_backend/afib_cnn_lstm_v1.pt)
+  * Backend API folder: [/backend/afib_cnn_lstm_v1.pt](file:///home/chrollos/Documents/ecg-v1/backend/afib_cnn_lstm_v1.pt)
 
 ### 4. API Backend & Frontend Sync
-* **FastAPI Server (`fast_api_backend/server.py`)**:
+* **FastAPI Server (`backend/server.py`)**:
   * Re-engineered to support both **500 sample (2s)** and **2500 sample (10s)** input payloads for backward compatibility.
   * Dynamically detects acceleration hardware: runs CUDA on Linux PC, MPS on macOS (for Apple Silicon GPU), or CPU fallback, returning active hardware in JSON responses.
   * Preprocesses incoming request signals on the fly using the matching bandpass filter and normalization DSP pipeline.

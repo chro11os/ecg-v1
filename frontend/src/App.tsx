@@ -2,25 +2,9 @@ import { useState, useEffect } from "react";
 import type { DiagnosisData, BurdenTier, Patient } from "./types";
 import DiagnosisDashboard from "./components/DiagnosisDashboard";
 import FileUploadArea from "./components/FileUploadArea";
-
-interface HistoryItem {
-    id: string;
-    fileName: string;
-    timestamp: string;
-    burdenTier: BurdenTier;
-    confidence: number;
-    burden: number;
-    hardware: string;
-    responseTime: number;
-    rawSignal: number[];
-    rPeaks?: number[];
-    rrVariance?: number;
-    rmssd?: number;
-    gradCam?: number[];
-    strokeRiskScore?: number;
-    cumulativeAFibBurden?: number;
-    patientId?: string;
-}
+import Sidebar from "./components/Sidebar";
+import type { HistoryItem } from "./components/ScanHistory";
+import ECGSimulatorPanel from "./components/ECGSimulatorPanel";
 
 export default function App() {
     const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
@@ -58,6 +42,10 @@ export default function App() {
     // Scan Filter and Sorting
     const [scanFilter, setScanFilter] = useState<string>("ALL");
     const [scanSort, setScanSort] = useState<string>("NEWEST");
+
+    // Workstation & Simulator Tabs
+    const [activeWorkstationTab, setActiveWorkstationTab] = useState<"UPLOAD" | "SIMULATE">("UPLOAD");
+    const [anonymousTab, setAnonymousTab] = useState<"INFO" | "SIMULATE">("INFO");
 
     const fetchNextId = async () => {
         try {
@@ -290,8 +278,8 @@ export default function App() {
 
             setHistory(prev => [historyItem, ...prev]);
 
+            fetchPatients();
             if (patientIdToUse) {
-                fetchPatients();
                 fetchPatientHistory(patientIdToUse);
             }
         } catch (error) {
@@ -347,462 +335,43 @@ export default function App() {
 
     return (
         <div className="min-h-screen flex text-text-primary bg-bg-canvas overflow-x-hidden">
-            {/* Permanently Docked ECG Registry Sidebar */}
-            <div className="w-80 shrink-0 bg-card-bg border-r border-border-subtle p-6 flex flex-col h-screen sticky top-0 overflow-y-auto z-10 shadow-md">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-border-subtle">
-                    <h2 className="text-lg font-bold font-mono tracking-wide text-text-primary">ECG REGISTRY</h2>
-                    <button 
-                        onClick={() => setDiagnosis(null)}
-                        className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary-light hover:bg-brand-primary-light-border text-brand-primary border border-brand-primary-light-border rounded-none cursor-pointer active:scale-95"
-                    >
-                        HELP
-                    </button>
-                </div>
-
-                {/* Multi-Panel Tabs */}
-                <div className="flex border-b border-border-subtle mb-4">
-                    <button
-                        onClick={() => setSidebarTab("PATIENTS")}
-                        className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
-                            sidebarTab === "PATIENTS"
-                                ? "border-brand-primary text-brand-primary font-black"
-                                : "border-transparent text-brand-secondary hover:text-text-primary"
-                        }`}
-                    >
-                        PATIENTS
-                    </button>
-                    <button
-                        onClick={() => setSidebarTab("SCANS")}
-                        className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
-                            sidebarTab === "SCANS"
-                                ? "border-brand-primary text-brand-primary font-black"
-                                : "border-transparent text-brand-secondary hover:text-text-primary"
-                        }`}
-                    >
-                        SCANS ({history.length})
-                    </button>
-                </div>
-
-                <div className="flex-1 space-y-3 pr-1">
-                    {sidebarTab === "PATIENTS" ? (
-                        <div className="space-y-3">
-                            {/* New Patient Registration Trigger */}
-                            <button
-                                onClick={() => {
-                                    if (isRegistering) {
-                                        setIsRegistering(false);
-                                        setEditingPatientId(null);
-                                        setNewPatient({
-                                            id: "",
-                                            name: "",
-                                            age: 65,
-                                            gender: "male",
-                                            hypertension: false,
-                                            diabetes: false,
-                                            stroke_history: false,
-                                            vascular_disease: false,
-                                            heart_failure: false,
-                                        });
-                                    } else {
-                                        setIsRegistering(true);
-                                    }
-                                }}
-                                className="w-full py-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary-light-hover border border-brand-primary-light-border text-[11px] font-mono font-bold transition-all cursor-pointer rounded-none active:scale-[0.98]"
-                            >
-                                {isRegistering 
-                                    ? (editingPatientId ? "✕ CANCEL EDIT" : "✕ CANCEL REGISTRATION") 
-                                    : "＋ REGISTER NEW PATIENT"
-                                }
-                            </button>
-
-                            {isRegistering && (
-                                <form onSubmit={registerPatient} className="bg-bg-canvas p-3 border border-border-subtle space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <div>
-                                        <label className="block text-[9px] font-mono text-brand-secondary uppercase">Patient ID</label>
-                                        <div className="w-full bg-bg-canvas border border-border-subtle text-xs p-1.5 mt-0.5 rounded-none font-mono text-zinc-500 select-none">
-                                            {editingPatientId ? editingPatientId : (previewId || "Fetching ID...")} {!editingPatientId && <span className="opacity-60 italic text-[10px]">(Preview)</span>}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[9px] font-mono text-brand-secondary uppercase">Full Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={newPatient.name}
-                                            onChange={e => setNewPatient(prev => ({ ...prev, name: e.target.value }))}
-                                            className="w-full bg-card-bg border border-border-subtle text-xs p-1 mt-0.5 rounded-none font-mono"
-                                            placeholder="John Doe"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[9px] font-mono text-brand-secondary uppercase">Age *</label>
-                                            <input
-                                                type="number"
-                                                required
-                                                value={newPatient.age === 0 ? "" : newPatient.age}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    setNewPatient(prev => ({ ...prev, age: val === "" ? "" as any : Number(val) }));
-                                                }}
-                                                className="w-full bg-card-bg border border-border-subtle text-xs p-1 mt-0.5 rounded-none font-mono"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[9px] font-mono text-brand-secondary uppercase">Gender *</label>
-                                            <select
-                                                value={newPatient.gender}
-                                                onChange={e => setNewPatient(prev => ({ ...prev, gender: e.target.value }))}
-                                                className="w-full bg-card-bg border border-border-subtle text-xs p-1 mt-0.5 rounded-none font-mono"
-                                            >
-                                                <option value="male">MALE</option>
-                                                <option value="female">FEMALE</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Comorbidities checkboxes */}
-                                    <div className="border-t border-border-subtle pt-2 mt-1 space-y-1">
-                                        <p className="text-[9px] font-mono text-brand-secondary uppercase font-bold">Comorbidities (CHA₂DS₂-VASc)</p>
-                                        <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
-                                            <input type="checkbox" checked={newPatient.heart_failure} onChange={e => setNewPatient(prev => ({ ...prev, heart_failure: e.target.checked }))} />
-                                            Heart Failure (+1)
-                                        </label>
-                                        <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
-                                            <input type="checkbox" checked={newPatient.hypertension} onChange={e => setNewPatient(prev => ({ ...prev, hypertension: e.target.checked }))} />
-                                            Hypertension (+1)
-                                        </label>
-                                        <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
-                                            <input type="checkbox" checked={newPatient.diabetes} onChange={e => setNewPatient(prev => ({ ...prev, diabetes: e.target.checked }))} />
-                                            Diabetes (+1)
-                                        </label>
-                                        <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
-                                            <input type="checkbox" checked={newPatient.stroke_history} onChange={e => setNewPatient(prev => ({ ...prev, stroke_history: e.target.checked }))} />
-                                            Stroke / TIA (+2)
-                                        </label>
-                                        <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
-                                            <input type="checkbox" checked={newPatient.vascular_disease} onChange={e => setNewPatient(prev => ({ ...prev, vascular_disease: e.target.checked }))} />
-                                            Vascular Disease (+1)
-                                        </label>
-                                    </div>
-
-                                    {/* File upload section inside patient creation */}
-                                    {!editingPatientId && (
-                                        <div className="border-t border-border-subtle pt-2 mt-1 space-y-1">
-                                            <p className="text-[9px] font-mono text-brand-secondary uppercase font-bold">ECG Baseline Data (2,500 samples)</p>
-                                            <FileUploadArea
-                                                onDataLoaded={(signal, name) => {
-                                                    setTempSignal(signal);
-                                                    setTempFileName(name);
-                                                }}
-                                                onError={(msg) => alert(msg)}
-                                            />
-                                            {tempSignal && (
-                                                <p className="text-[10px] text-status-healthy font-mono font-bold mt-1">
-                                                    ✓ ECG File Loaded: {tempFileName}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy-hover text-[10.5px] font-mono font-bold rounded-none cursor-pointer"
-                                    >
-                                        {editingPatientId ? "SAVE PATIENT CHANGES" : "SUBMIT PROFILE & RUN ECG"}
-                                    </button>
-                                </form>
-                            )}
-
-                            <div className="space-y-2">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={patientSearch}
-                                        onChange={(e) => setPatientSearch(e.target.value)}
-                                        placeholder="SEARCH PATIENT (BY ID OR NAME)..."
-                                        className="w-full bg-card-bg border border-border-subtle text-[10px] font-mono p-2 pr-8 rounded-none uppercase placeholder:text-brand-secondary-dimmed focus:border-brand-primary focus:outline-none"
-                                    />
-                                    {patientSearch && (
-                                        <button
-                                            onClick={() => setPatientSearch("")}
-                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-secondary-muted hover:text-brand-primary text-xs cursor-pointer"
-                                            title="Clear search"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex items-center justify-between gap-2">
-                                    <label className="text-[8px] font-mono text-brand-secondary uppercase select-none font-bold">Sort Patients:</label>
-                                    <select
-                                        value={patientSort}
-                                        onChange={e => setPatientSort(e.target.value)}
-                                        className="bg-bg-canvas border border-border-subtle text-[9px] p-1 rounded-none font-mono text-text-primary cursor-pointer font-bold w-48 text-right focus:outline-none focus:border-brand-primary/50"
-                                    >
-                                        <option value="ID_ASC">ID (A→Z)</option>
-                                        <option value="NAME_ASC">NAME (A→Z)</option>
-                                        <option value="RISK_DESC">STROKE RISK (HIGH→LOW)</option>
-                                        <option value="BURDEN_DESC">CUMULATIVE BURDEN (HIGH→LOW)</option>
-                                        <option value="AGE_DESC">AGE (HIGH→LOW)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {patients
-                                .filter(patient => 
-                                    patient.id.toLowerCase().includes(patientSearch.toLowerCase()) ||
-                                    patient.name.toLowerCase().includes(patientSearch.toLowerCase())
-                                )
-                                .sort((a, b) => {
-                                    if (patientSort === "ID_ASC") {
-                                        return a.id.localeCompare(b.id);
-                                    }
-                                    if (patientSort === "NAME_ASC") {
-                                        return a.name.localeCompare(b.name);
-                                    }
-                                    if (patientSort === "RISK_DESC") {
-                                        return (b.stroke_risk_score ?? 0) - (a.stroke_risk_score ?? 0);
-                                    }
-                                    if (patientSort === "BURDEN_DESC") {
-                                        return (b.cumulative_burden ?? 0) - (a.cumulative_burden ?? 0);
-                                    }
-                                    if (patientSort === "AGE_DESC") {
-                                        return b.age - a.age;
-                                    }
-                                    return 0;
-                                })
-                                .map((patient) => {
-                                const isExpanded = selectedPatientId === patient.id;
-                                return (
-                                    <div 
-                                        key={patient.id} 
-                                        className={`border transition-all p-3 ${
-                                            isExpanded ? "border-brand-primary bg-bg-canvas" : "border-border-subtle bg-bg-canvas"
-                                        }`}
-                                    >
-                                        <div 
-                                            onClick={() => {
-                                                const nextId = isExpanded ? null : patient.id;
-                                                setSelectedPatientId(nextId);
-                                                setDiagnosis(null); // close active scan log and focus on the newly selected patient
-                                            }}
-                                            className="flex justify-between items-center cursor-pointer hover:text-brand-primary transition-colors"
-                                        >
-                                            <div>
-                                                <p className="text-xs font-mono font-bold text-zinc-500">Patient: {patient.id}</p>
-                                                <p className="text-[10px] font-bold text-brand-primary">{patient.name}</p>
-                                                <p className="text-[9px] text-brand-secondary font-mono mt-0.5">{patient.gender.toUpperCase()}, {patient.age} Y/O</p>
-                                            </div>
-                                            <span className="text-xs font-mono">{isExpanded ? "▲" : "▼"}</span>
-                                        </div>
-
-                                        {isExpanded && (
-                                            <div className="mt-3 border-t border-border-subtle pt-2 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                {/* Clinical Summary snippet in patient registry */}
-                                                <div className="p-2 bg-bg-canvas-card border border-border-subtle font-mono text-[9px] text-brand-secondary space-y-1">
-                                                    <div>STROKE RISK: <span className="font-bold text-brand-primary">{patient.stroke_risk_score} PTS</span></div>
-                                                    <div>CUMULATIVE BURDEN: <span className="font-bold text-status-critical">{patient.cumulative_burden ?? 0.0}%</span></div>
-                                                </div>
-
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => startEditingPatient(patient)}
-                                                        className="flex-1 py-1.5 bg-brand-primary-light hover:bg-brand-primary-light-hover text-brand-primary border border-brand-primary-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
-                                                    >
-                                                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                        </svg>
-                                                        EDIT PROFILE
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deletePatient(patient.id)}
-                                                        className="flex-1 py-1.5 bg-status-critical-light hover:bg-status-critical-light-border text-status-critical border border-status-critical-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
-                                                    >
-                                                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                        DELETE PATIENT
-                                                    </button>
-                                                </div>
-
-                                                <div className="flex justify-between items-center mt-2 pb-1 border-b border-border-subtle">
-                                                    <p className="text-[9px] font-mono font-bold text-brand-secondary uppercase">Scan Logs:</p>
-                                                    <select
-                                                        value={patientScanSort}
-                                                        onChange={e => setPatientScanSort(e.target.value)}
-                                                        className="bg-transparent text-brand-secondary text-[8px] font-mono cursor-pointer border-none focus:outline-none font-bold"
-                                                    >
-                                                        <option value="NEWEST">NEWEST FIRST</option>
-                                                        <option value="OLDEST">OLDEST FIRST</option>
-                                                        <option value="BURDEN_DESC">BURDEN (HIGH→LOW)</option>
-                                                    </select>
-                                                </div>
-                                                {selectedPatientScans.length === 0 ? (
-                                                    <p className="text-[9px] font-mono text-brand-secondary-muted text-center py-2">NO UPLOADED SCANS</p>
-                                                ) : (
-                                                    [...selectedPatientScans]
-                                                        .sort((a, b) => {
-                                                            if (patientScanSort === "NEWEST") {
-                                                                return b.timestamp.localeCompare(a.timestamp);
-                                                            }
-                                                            if (patientScanSort === "OLDEST") {
-                                                                return a.timestamp.localeCompare(b.timestamp);
-                                                            }
-                                                            if (patientScanSort === "BURDEN_DESC") {
-                                                                return b.predicted_class - a.predicted_class;
-                                                            }
-                                                            return 0;
-                                                        })
-                                                        .map((scan) => (
-                                                        <div 
-                                                            key={scan.id}
-                                                            onClick={() => loadPatientScan(scan)}
-                                                            className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary cursor-pointer transition-all duration-150 hover:translate-x-1"
-                                                        >
-                                                            <div className="flex justify-between items-center text-[10px] font-mono">
-                                                                <span className="font-bold text-brand-secondary">Scan #{scan.id}</span>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-brand-secondary-muted text-[8px]">{scan.timestamp.split(" ")[0]}</span>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            deleteScan(scan.id, patient.id);
-                                                                        }}
-                                                                        className="text-status-critical hover:text-status-critical-hover transition-colors p-0.5 hover:bg-status-critical-light flex items-center justify-center cursor-pointer"
-                                                                        title="Delete Scan"
-                                                                    >
-                                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                        </svg>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex justify-between items-center mt-2">
-                                                                <span className={`px-1.5 py-0.2 text-[8px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                                                    scan.predicted_class === 0 ? 'bg-status-healthy-light text-status-healthy border border-status-healthy-light-border' :
-                                                                    scan.predicted_class === 1 ? 'bg-status-info-light text-status-info border border-status-info-light-border' :
-                                                                    scan.predicted_class === 2 ? 'bg-status-warning-light text-status-warning border border-status-warning-light-border' :
-                                                                    'bg-status-critical-light text-status-critical border border-status-critical-light-border'
-                                                                }`}>
-                                                                    {scan.predicted_class === 0 ? 'Sinus Rhythm' :
-                                                                     scan.predicted_class === 1 ? 'Micro' :
-                                                                     scan.predicted_class === 2 ? 'Intermed.' : 'High'}
-                                                                </span>
-                                                                <span className="text-[9px] font-mono text-brand-secondary">{Math.round(scan.confidence * 100)}% CONF</span>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {/* Filter and Sort Toolbar */}
-                            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-border-subtle mb-2">
-                                <div>
-                                    <label className="block text-[8px] font-mono text-brand-secondary uppercase mb-0.5">Filter Type</label>
-                                    <select
-                                        value={scanFilter}
-                                        onChange={e => setScanFilter(e.target.value)}
-                                        className="w-full bg-bg-canvas border border-border-subtle text-[9px] p-1 rounded-none font-mono text-text-primary cursor-pointer font-bold"
-                                    >
-                                        <option value="ALL">ALL TYPES</option>
-                                        <option value="0">SINUS RHYTHM</option>
-                                        <option value="1">MICRO-BURDEN</option>
-                                        <option value="2">INTERMEDIATE</option>
-                                        <option value="3">HIGH BURDEN</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[8px] font-mono text-brand-secondary uppercase mb-0.5">Arrange By</label>
-                                    <select
-                                        value={scanSort}
-                                        onChange={e => setScanSort(e.target.value)}
-                                        className="w-full bg-bg-canvas border border-border-subtle text-[9px] p-1 rounded-none font-mono text-text-primary cursor-pointer font-bold"
-                                    >
-                                        <option value="NEWEST">NEWEST FIRST</option>
-                                        <option value="OLDEST">OLDEST FIRST</option>
-                                        <option value="TYPE_ASC">TYPE (LOW→HIGH)</option>
-                                        <option value="TYPE_DESC">TYPE (HIGH→LOW)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {(() => {
-                                // 1. Filter
-                                let filtered = [...history];
-                                if (scanFilter !== "ALL") {
-                                    const tierNum = Number(scanFilter);
-                                    filtered = filtered.filter(item => item.burdenTier === tierNum);
-                                }
-
-                                // 2. Sort/Arrange
-                                filtered.sort((a, b) => {
-                                    if (scanSort === "NEWEST") {
-                                        return b.timestamp.localeCompare(a.timestamp);
-                                    }
-                                    if (scanSort === "OLDEST") {
-                                        return a.timestamp.localeCompare(b.timestamp);
-                                    }
-                                    if (scanSort === "TYPE_ASC") {
-                                        return a.burdenTier - b.burdenTier;
-                                    }
-                                    if (scanSort === "TYPE_DESC") {
-                                        return b.burdenTier - a.burdenTier;
-                                    }
-                                    return 0;
-                                });
-
-                                if (filtered.length === 0) {
-                                    return (
-                                        <p className="text-xs font-mono text-brand-secondary text-center py-10">
-                                            NO MATCHING SCANS
-                                        </p>
-                                    );
-                                }
-
-                                return filtered.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        onClick={() => loadHistoryItem(item)}
-                                        className="p-4 rounded-none bg-bg-canvas border border-border-subtle hover:border-brand-primary hover:bg-card-bg cursor-pointer transition-all duration-200 active:scale-[0.99] shadow-xs hover:shadow-md"
-                                    >
-                                        <div className="flex justify-between items-start gap-2 mb-2">
-                                            <span className="text-xs font-mono font-bold truncate max-w-40 text-text-primary">
-                                                {item.fileName}
-                                            </span>
-                                            <span className="text-[9px] font-mono text-brand-secondary-muted shrink-0 mt-0.5">
-                                                {item.timestamp}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between items-center mt-3">
-                                            <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-none uppercase tracking-wider ${
-                                                item.burdenTier === 0 ? 'bg-status-healthy-light text-status-healthy border border-status-healthy-light-border' :
-                                                item.burdenTier === 1 ? 'bg-status-info-light text-status-info border border-status-info-light-border' :
-                                                item.burdenTier === 2 ? 'bg-status-warning-light text-status-warning border border-status-warning-light-border' :
-                                                'bg-status-critical-light text-status-critical border border-status-critical-light-border'
-                                            }`}>
-                                                {item.burdenTier === 0 ? 'Sinus Rhythm' :
-                                                 item.burdenTier === 1 ? 'Micro' :
-                                                 item.burdenTier === 2 ? 'Intermed.' : 'High'}
-                                            </span>
-                                            <span className="text-[9px] font-mono text-brand-secondary shrink-0">
-                                                {item.responseTime}MS ON {item.hardware.toUpperCase()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ));
-                            })()}
-                        </div>
-                    )}
-                </div>
-            </div>
+            <Sidebar
+                setDiagnosis={setDiagnosis}
+                sidebarTab={sidebarTab}
+                setSidebarTab={setSidebarTab}
+                isRegistering={isRegistering}
+                setIsRegistering={setIsRegistering}
+                editingPatientId={editingPatientId}
+                setEditingPatientId={setEditingPatientId}
+                newPatient={newPatient}
+                setNewPatient={setNewPatient}
+                registerPatient={registerPatient}
+                previewId={previewId}
+                tempSignal={tempSignal}
+                tempFileName={tempFileName}
+                setTempSignal={setTempSignal}
+                setTempFileName={setTempFileName}
+                patientSearch={patientSearch}
+                setPatientSearch={setPatientSearch}
+                patientSort={patientSort}
+                setPatientSort={setPatientSort}
+                patientScanSort={patientScanSort}
+                setPatientScanSort={setPatientScanSort}
+                patients={patients}
+                selectedPatientId={selectedPatientId}
+                setSelectedPatientId={setSelectedPatientId}
+                selectedPatientScans={selectedPatientScans}
+                startEditingPatient={startEditingPatient}
+                deletePatient={deletePatient}
+                deleteScan={deleteScan}
+                loadPatientScan={loadPatientScan}
+                history={history}
+                scanFilter={scanFilter}
+                setScanFilter={setScanFilter}
+                scanSort={scanSort}
+                setScanSort={setScanSort}
+                loadHistoryItem={loadHistoryItem}
+            />
 
             {/* Main Content Pane */}
             <div className="flex-1 flex flex-col p-6 min-w-0 overflow-y-auto">
@@ -816,15 +385,45 @@ export default function App() {
                                         {patients.find(p => p.id === selectedPatientId)?.name} ({selectedPatientId})
                                     </h2>
                                     <p className="text-sm text-brand-secondary font-mono">
-                                        Upload a new ECG signal to append to this patient's historical registry.
+                                        Upload or simulate a new ECG signal to append to this patient's historical registry.
                                     </p>
                                 </div>
+
+                                <div className="flex border border-border-subtle p-0.5 bg-bg-canvas w-full max-w-md">
+                                    <button
+                                        onClick={() => setActiveWorkstationTab("UPLOAD")}
+                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
+                                            activeWorkstationTab === "UPLOAD"
+                                                ? "bg-card-bg text-brand-primary shadow-xs"
+                                                : "text-brand-secondary hover:text-text-primary"
+                                        }`}
+                                    >
+                                        UPLOAD FILE
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveWorkstationTab("SIMULATE")}
+                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
+                                            activeWorkstationTab === "SIMULATE"
+                                                ? "bg-card-bg text-brand-primary shadow-xs"
+                                                : "text-brand-secondary hover:text-text-primary"
+                                        }`}
+                                    >
+                                        RUN SIMULATION
+                                    </button>
+                                </div>
                                 
-                                <div className="w-full max-w-md border border-border-subtle p-6 bg-bg-canvas-card">
-                                    <FileUploadArea
-                                        onDataLoaded={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
-                                        onError={(msg) => alert(msg)}
-                                    />
+                                <div className="w-full max-w-2xl border border-border-subtle p-6 bg-bg-canvas-card">
+                                    {activeWorkstationTab === "UPLOAD" ? (
+                                        <FileUploadArea
+                                            onDataLoaded={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
+                                            onError={(msg) => alert(msg)}
+                                        />
+                                    ) : (
+                                        <ECGSimulatorPanel
+                                            onAnalyze={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
+                                            patientName={patients.find(p => p.id === selectedPatientId)?.name}
+                                        />
+                                    )}
                                 </div>
                             </div>
                             {loading && (
@@ -836,21 +435,55 @@ export default function App() {
                     ) : (
                         <div className="w-full flex-1 flex flex-col animate-in fade-in duration-300">
                             <div className="flex-1 border border-border-subtle p-8 bg-card-bg shadow-sm flex flex-col justify-center items-center space-y-6">
-                                <div className="w-16 h-16 bg-brand-primary-light border border-brand-primary-light-border rounded-none flex items-center justify-center mx-auto text-brand-primary text-xl font-bold font-mono">
-                                    ECG
-                                </div>
+                                <img 
+                                    src="https://upload.wikimedia.org/wikipedia/en/f/f8/Mapua_Uni_logo.svg" 
+                                    alt="Mapúa University Logo" 
+                                    className="w-20 h-20 object-contain mx-auto select-none pointer-events-none"
+                                />
                                 <div className="text-center space-y-2">
-                                    <h2 className="text-3xl font-bold tracking-wide">CARDIAC CDSS WORKSTATION</h2>
+                                    <h2 className="text-3xl font-bold tracking-wide uppercase">GTT - AFib Detection & Assessment Tool</h2>
                                     <p className="text-sm text-brand-secondary font-mono">
                                         Atrial Fibrillation Temporal Burden & Stroke Risk Calculator.
                                     </p>
                                 </div>
-                                <div className="border-t border-border-subtle pt-6 w-full max-w-lg text-center text-xs font-mono text-brand-secondary space-y-3">
-                                    <p className="font-bold text-text-primary uppercase tracking-wider mb-2">Instructions to begin analysis:</p>
-                                    <p>1. Register a new patient profile using the sidebar form.</p>
-                                    <p>2. Upload their raw ECG signal file to initialize analysis.</p>
-                                    <p>3. Select any registered patient to view their historical longitudinal trend.</p>
+
+                                <div className="flex border border-border-subtle p-0.5 bg-bg-canvas w-full max-w-md">
+                                    <button
+                                        onClick={() => setAnonymousTab("INFO")}
+                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
+                                            anonymousTab === "INFO"
+                                                ? "bg-card-bg text-brand-primary shadow-xs"
+                                                : "text-brand-secondary hover:text-text-primary"
+                                        }`}
+                                    >
+                                        INSTRUCTIONS
+                                    </button>
+                                    <button
+                                        onClick={() => setAnonymousTab("SIMULATE")}
+                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
+                                            anonymousTab === "SIMULATE"
+                                                ? "bg-card-bg text-brand-primary shadow-xs"
+                                                : "text-brand-secondary hover:text-text-primary"
+                                        }`}
+                                    >
+                                        SIMULATE ECG (ANONYMOUS)
+                                    </button>
                                 </div>
+
+                                {anonymousTab === "INFO" ? (
+                                    <div className="border-t border-border-subtle pt-6 w-full max-w-lg text-center text-xs font-mono text-brand-secondary space-y-3">
+                                        <p className="font-bold text-text-primary uppercase tracking-wider mb-2">Instructions to begin analysis:</p>
+                                        <p>1. Register a new patient profile using the sidebar form.</p>
+                                        <p>2. Upload their raw ECG signal file to initialize analysis.</p>
+                                        <p>3. Select any registered patient to view their historical longitudinal trend.</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full max-w-2xl border border-border-subtle p-6 bg-bg-canvas-card">
+                                        <ECGSimulatorPanel
+                                            onAnalyze={(signal, name) => handleAnalysis(signal, name)}
+                                        />
+                                    </div>
+                                )}
                             </div>
                             {loading && (
                                 <p className="text-brand-primary mt-6 text-center animate-pulse font-mono tracking-widest text-sm shrink-0">

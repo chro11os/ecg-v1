@@ -201,7 +201,7 @@ def train_model():
     # Automatically synchronize weights file to API backend and root directories for convenience
     try:
         import shutil
-        backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../fast_api_backend/afib_cnn_lstm_v1.pt"))
+        backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../backend/afib_cnn_lstm_v1.pt"))
         shutil.copy2(save_path, backend_path)
         print(f"Convenience Sync: Weights successfully copied to backend at {backend_path}")
 
