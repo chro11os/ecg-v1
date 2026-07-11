@@ -112,10 +112,20 @@ export default function PatientList({
                             }}
                             className="flex justify-between items-center cursor-pointer hover:text-brand-primary transition-colors"
                         >
-                            <div>
-                                <p className="text-xs font-mono font-bold text-zinc-500">Patient: {patient.id}</p>
-                                <p className="text-[10px] font-bold text-brand-primary">{patient.name}</p>
-                                <p className="text-[9px] text-brand-secondary font-mono mt-0.5">{patient.gender.toUpperCase()}, {patient.age} Y/O</p>
+                            <div className="flex items-center gap-3">
+                                {/* Profile Picture Thumbnail */}
+                                <div className="w-8 h-8 rounded-none border border-border-subtle bg-bg-canvas overflow-hidden shrink-0">
+                                    <img 
+                                        src={patient.picture_url || "https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg"} 
+                                        alt="Profile Thumbnail" 
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-mono font-bold text-zinc-500">Patient: {patient.id}</p>
+                                    <p className="text-[10px] font-bold text-brand-primary">{patient.name}</p>
+                                    <p className="text-[9px] text-brand-secondary font-mono mt-0.5">{patient.gender.toUpperCase()}, {patient.age} Y/O</p>
+                                </div>
                             </div>
                             <span className="text-xs font-mono">{isExpanded ? "▲" : "▼"}</span>
                         </div>

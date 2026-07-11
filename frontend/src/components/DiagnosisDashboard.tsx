@@ -688,16 +688,12 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 			{/* Patient Profile Card (Placeholder Picture) */}
 			<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex items-center gap-4 animate-in fade-in duration-300">
 				{/* Placeholder Profile Picture */}
-				<div className="w-16 h-16 bg-bg-canvas border border-border-subtle flex items-center justify-center shrink-0 rounded-none overflow-hidden relative group">
-					{activePatient && activePatient.picture_url ? (
-						<img src={activePatient.picture_url} alt="Profile" className="w-full h-full object-cover" />
-					) : (
-						<div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400">
-							<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-								<path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-							</svg>
-						</div>
-					)}
+				<div className="w-16 h-16 bg-bg-canvas border border-border-subtle flex items-center justify-center shrink-0 rounded-none overflow-hidden relative">
+					<img 
+						src={(activePatient && activePatient.picture_url) || "https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg"} 
+						alt="Profile" 
+						className="w-full h-full object-cover" 
+					/>
 				</div>
 				<div>
 					<p className="text-[9px] font-mono text-zinc-500 font-bold uppercase tracking-wider">Targeted Clinical Profile</p>
