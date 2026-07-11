@@ -37,6 +37,7 @@ async def predict_ecg(payload: ECGPayload):
         # 7. Database storage and cumulative analytics
         stroke_risk_score = 0
         cumulative_burden = 0.0
+        scan_id = None
         patient_id_to_use = payload.patient_id or "#0000-0"
 
         conn = get_db_connection()
@@ -78,6 +79,7 @@ async def predict_ecg(payload: ECGPayload):
                     json.dumps(grad_cam_values)
                 ))
                 conn.commit()
+                scan_id = cursor.lastrowid
 
                 # Re-calculate cumulative burden
                 cursor.execute("SELECT predicted_class FROM scans WHERE patient_id = ?", (patient_id_to_use,))
@@ -100,7 +102,8 @@ async def predict_ecg(payload: ECGPayload):
             "rmssd": round(rmssd, 2),
             "grad_cam": grad_cam_values,
             "stroke_risk_score": stroke_risk_score,
-            "cumulative_burden": cumulative_burden
+            "cumulative_burden": cumulative_burden,
+            "scan_id": scan_id
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

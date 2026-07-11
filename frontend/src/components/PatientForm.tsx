@@ -126,7 +126,7 @@ export default function PatientForm({
 
             <button
                 type="submit"
-                className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy-hover text-[10.5px] font-mono font-bold rounded-none cursor-pointer"
+                className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy-hover text-[10.5px] font-mono font-bold rounded-none cursor-pointer active:scale-[0.98] transition-all"
             >
                 {editingPatientId ? "SAVE PATIENT CHANGES" : "SUBMIT PROFILE & RUN ECG"}
             </button>

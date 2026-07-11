@@ -13,9 +13,11 @@ export interface Patient {
     heart_failure: number;
     stroke_risk_score?: number;
     cumulative_burden?: number;
+    picture_url?: string;
 }
 
 export interface DiagnosisData {
+    id?: number;
     burdenTier: BurdenTier;
     confidence: number;
     burden: number; // calculated AF burden percentage

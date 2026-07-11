@@ -34,7 +34,10 @@ interface SidebarProps {
     deletePatient: (id: string) => void;
     deleteScan: (scanId: number, patientId: string) => void;
     loadPatientScan: (scan: any) => void;
-    history: HistoryItem[];
+    realHistory: HistoryItem[];
+    simulatedHistory: HistoryItem[];
+    scanSource: "real" | "simulated";
+    setScanSource: (src: "real" | "simulated") => void;
     scanFilter: string;
     setScanFilter: (f: string) => void;
     scanSort: string;
@@ -72,7 +75,10 @@ export default function Sidebar({
     deletePatient,
     deleteScan,
     loadPatientScan,
-    history,
+    realHistory,
+    simulatedHistory,
+    scanSource,
+    setScanSource,
     scanFilter,
     setScanFilter,
     scanSort,
@@ -95,7 +101,7 @@ export default function Sidebar({
             <div className="flex border-b border-border-subtle mb-4">
                 <button
                     onClick={() => setSidebarTab("PATIENTS")}
-                    className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
+                    className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all active:scale-[0.97] ${
                         sidebarTab === "PATIENTS"
                             ? "border-brand-primary text-brand-primary font-black"
                             : "border-transparent text-brand-secondary hover:text-text-primary"
@@ -103,16 +109,38 @@ export default function Sidebar({
                 >
                     PATIENTS
                 </button>
-                <button
-                    onClick={() => setSidebarTab("SCANS")}
-                    className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all ${
-                        sidebarTab === "SCANS"
-                            ? "border-brand-primary text-brand-primary font-black"
-                            : "border-transparent text-brand-secondary hover:text-text-primary"
-                    }`}
-                >
-                    SCANS ({history.length})
-                </button>
+                <div className={`flex-1 border-b-2 flex items-center justify-between transition-all ${
+                    sidebarTab === "SCANS" ? "border-brand-primary" : "border-transparent"
+                }`}>
+                    <button
+                        onClick={() => setSidebarTab("SCANS")}
+                        className={`flex-1 text-center py-2 text-xs font-mono font-bold cursor-pointer transition-all active:scale-[0.97] ${
+                            sidebarTab === "SCANS"
+                                ? "text-brand-primary font-black"
+                                : "text-brand-secondary hover:text-text-primary"
+                        }`}
+                    >
+                        {scanSource === "real" ? `SCANS (${realHistory.length})` : `SIMS (${simulatedHistory.length})`}
+                    </button>
+                    <div className="relative flex items-center pr-2.5 h-full cursor-pointer hover:text-brand-primary transition-all">
+                        <select
+                            value={scanSource}
+                            onChange={(e) => {
+                                setScanSource(e.target.value as "real" | "simulated");
+                                setSidebarTab("SCANS");
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        >
+                            <option value="real">SCANS (REAL)</option>
+                            <option value="simulated">SIMULATIONS (SESSION)</option>
+                        </select>
+                        <svg className={`w-3 h-3 pointer-events-none transition-all ${
+                            sidebarTab === "SCANS" ? "text-brand-primary" : "text-brand-secondary"
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </div>
+                </div>
             </div>
 
             <div className="flex-1 space-y-3 pr-1">
@@ -181,7 +209,7 @@ export default function Sidebar({
                     </div>
                 ) : (
                     <ScanHistory
-                        history={history}
+                        history={scanSource === "real" ? realHistory : simulatedHistory}
                         scanFilter={scanFilter}
                         setScanFilter={setScanFilter}
                         scanSort={scanSort}

@@ -56,6 +56,11 @@ async def create_patient(patient: PatientCreate):
             patient.hypertension, patient.diabetes, patient.stroke_history,
             patient.vascular_disease, patient.heart_failure
         ))
+        if patient.picture_url:
+            cursor.execute("""
+                INSERT OR REPLACE INTO patient_pictures (patient_id, picture_url)
+                VALUES (?, ?)
+            """, (patient_id, patient.picture_url))
         conn.commit()
     except Exception as e:
         conn.close()
@@ -79,7 +84,11 @@ async def list_patients():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM patients")
+        cursor.execute("""
+            SELECT p.*, pic.picture_url 
+            FROM patients p
+            LEFT JOIN patient_pictures pic ON p.id = pic.patient_id
+        """)
         rows = cursor.fetchall()
         patients_list = []
         for row in rows:
@@ -171,6 +180,11 @@ async def update_patient(patient_id: str, patient: PatientCreate):
             patient.hypertension, patient.diabetes, patient.stroke_history,
             patient.vascular_disease, patient.heart_failure, patient_id
         ))
+        if patient.picture_url is not None:
+            cursor.execute("""
+                INSERT OR REPLACE INTO patient_pictures (patient_id, picture_url)
+                VALUES (?, ?)
+            """, (patient_id, patient.picture_url))
         conn.commit()
     except Exception as e:
         conn.close()

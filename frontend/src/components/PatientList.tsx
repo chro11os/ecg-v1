@@ -131,7 +131,7 @@ export default function PatientList({
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => startEditingPatient(patient)}
-                                        className="flex-1 py-1.5 bg-brand-primary-light hover:bg-brand-primary-light-hover text-brand-primary border border-brand-primary-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
+                                        className="flex-1 py-1.5 bg-brand-primary-light hover:bg-brand-primary-light-hover text-brand-primary border border-brand-primary-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1 active:scale-[0.97] transition-all"
                                     >
                                         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -140,7 +140,7 @@ export default function PatientList({
                                     </button>
                                     <button
                                         onClick={() => deletePatient(patient.id)}
-                                        className="flex-1 py-1.5 bg-status-critical-light hover:bg-status-critical-light-border text-status-critical border border-status-critical-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1"
+                                        className="flex-1 py-1.5 bg-status-critical-light hover:bg-status-critical-light-border text-status-critical border border-status-critical-light-border text-[9px] font-mono font-bold cursor-pointer flex items-center justify-center gap-1 active:scale-[0.97] transition-all"
                                     >
                                         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -181,7 +181,7 @@ export default function PatientList({
                                         <div 
                                             key={scan.id}
                                             onClick={() => loadPatientScan(scan)}
-                                            className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary cursor-pointer transition-all duration-150 hover:translate-x-1"
+                                            className="p-2 bg-card-bg border border-border-subtle hover:border-brand-primary cursor-pointer transition-all duration-150 hover:translate-x-1 active:scale-[0.98]"
                                         >
                                             <div className="flex justify-between items-center text-[10px] font-mono">
                                                 <span className="font-bold text-brand-secondary">Scan #{scan.id}</span>
@@ -192,7 +192,7 @@ export default function PatientList({
                                                             e.stopPropagation();
                                                             deleteScan(scan.id, patient.id);
                                                         }}
-                                                        className="text-status-critical hover:text-status-critical-hover transition-colors p-0.5 hover:bg-status-critical-light flex items-center justify-center cursor-pointer"
+                                                        className="text-status-critical hover:text-status-critical-hover transition-all p-0.5 hover:bg-status-critical-light flex items-center justify-center cursor-pointer active:scale-90"
                                                         title="Delete Scan"
                                                     >
                                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">

@@ -46,6 +46,16 @@ def init_db():
             FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
         )
     """)
+
+    # Create patient_pictures table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS patient_pictures (
+            patient_id TEXT PRIMARY KEY,
+            picture_url TEXT NOT NULL,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
+        )
+    """)
     
     conn.commit()
     conn.close()

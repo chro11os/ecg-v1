@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from backend.app.routers import patients, scans, predict
+from backend.app.database import init_db
+
+init_db()
 
 app = FastAPI(title="ECG Atrial Fibrillation API")
 

@@ -293,7 +293,7 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                     <button
                         onClick={() => { setRhythm("normal"); }}
                         disabled={isSimulating}
-                        className={`px-3 py-1 text-xs font-mono font-bold cursor-pointer rounded-none border transition-all ${
+                        className={`px-3 py-1 text-xs font-mono font-bold cursor-pointer rounded-none border transition-all active:scale-[0.97] ${
                             rhythm === "normal"
                                 ? "bg-status-healthy-light border-status-healthy text-status-healthy"
                                 : "bg-bg-canvas border-border-subtle text-brand-secondary hover:text-text-primary disabled:opacity-50"
@@ -304,7 +304,7 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                     <button
                         onClick={() => { setRhythm("afib"); }}
                         disabled={isSimulating}
-                        className={`px-3 py-1 text-xs font-mono font-bold cursor-pointer rounded-none border transition-all ${
+                        className={`px-3 py-1 text-xs font-mono font-bold cursor-pointer rounded-none border transition-all active:scale-[0.97] ${
                             rhythm === "afib"
                                 ? "bg-status-critical-light border-status-critical text-status-critical"
                                 : "bg-bg-canvas border-border-subtle text-brand-secondary hover:text-text-primary disabled:opacity-50"
@@ -328,7 +328,7 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                     <div className="flex items-center gap-6">
                         {/* Audio status indicator */}
                         <div 
-                            className="pointer-events-auto cursor-pointer text-xs font-bold px-2 py-0.5 border border-slate-700 bg-slate-900 text-slate-400 hover:text-[#00FF66]"
+                            className="pointer-events-auto cursor-pointer text-xs font-bold px-2 py-0.5 border border-slate-700 bg-slate-900 text-slate-400 hover:text-[#00FF66] active:scale-95 transition-all"
                             onClick={() => setSoundEnabled(!soundEnabled)}
                         >
                             {soundEnabled ? "BEEP ON" : "BEEP OFF"}
@@ -430,7 +430,7 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                     <button
                         onClick={resetSimulation}
                         disabled={isSimulating && progress === 0}
-                        className="px-4 py-2 bg-bg-canvas hover:bg-border-subtle text-brand-secondary hover:text-text-primary border border-border-subtle text-xs font-mono font-bold cursor-pointer rounded-none disabled:opacity-50"
+                        className="px-4 py-2 bg-bg-canvas hover:bg-border-subtle text-brand-secondary hover:text-text-primary border border-border-subtle text-xs font-mono font-bold cursor-pointer rounded-none disabled:opacity-50 active:scale-[0.98] transition-all"
                     >
                         RESET
                     </button>

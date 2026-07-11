@@ -11,6 +11,7 @@ class PatientCreate(BaseModel):
     stroke_history: int = 0
     vascular_disease: int = 0
     heart_failure: int = 0
+    picture_url: Optional[str] = None
 
 class ECGPayload(BaseModel):
     signal: List[float]

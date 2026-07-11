@@ -9,7 +9,9 @@ import ECGSimulatorPanel from "./components/ECGSimulatorPanel";
 export default function App() {
     const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [realHistory, setRealHistory] = useState<HistoryItem[]>([]);
+    const [simulatedHistory, setSimulatedHistory] = useState<HistoryItem[]>([]);
+    const [scanSource, setScanSource] = useState<"real" | "simulated">("real");
 
     // Patients Sidebar & Database States
     const [sidebarTab, setSidebarTab] = useState<"PATIENTS" | "SCANS">("PATIENTS");
@@ -91,8 +93,59 @@ export default function App() {
         }
     };
 
+    const fetchRecentScans = async () => {
+        try {
+            const res = await fetch("http://localhost:8000/scans");
+            if (res.ok) {
+                const data = await res.json();
+                const mapped: HistoryItem[] = data
+                    .filter((scan: any) => scan.patient_id !== "#0000-0")
+                    .map((scan: any) => {
+                        const tier = (scan.predicted_class ?? 0) as BurdenTier;
+                        let simulatedBurden = 0.0;
+                        if (tier === 1) simulatedBurden = 4.25;
+                        else if (tier === 2) simulatedBurden = 28.4;
+                        else if (tier === 3) simulatedBurden = 72.8;
+
+                        // Safe date parsing to prevent Safari/V8 crash
+                        let timeStr = "";
+                        if (scan.timestamp) {
+                            const formatted = scan.timestamp.includes(" ") ? scan.timestamp.replace(" ", "T") : scan.timestamp;
+                            const d = new Date(formatted);
+                            timeStr = isNaN(d.getTime())
+                                ? scan.timestamp
+                                : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                        }
+
+                        return {
+                            id: String(scan.id),
+                            fileName: scan.patient_name ? `${scan.patient_name}_scan_${scan.id}.json` : `patient_scan_${scan.id}.json`,
+                            timestamp: timeStr,
+                            burdenTier: tier,
+                            confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
+                            burden: tier === 0 ? 0.0 : simulatedBurden,
+                            hardware: "SQLite DB",
+                            responseTime: 0,
+                            rawSignal: typeof scan.signal_data === "string" ? JSON.parse(scan.signal_data) : (scan.signal_data ?? []),
+                            rPeaks: typeof scan.r_peaks === "string" ? JSON.parse(scan.r_peaks) : (scan.r_peaks ?? []),
+                            rrVariance: scan.rr_variance ?? 0.0,
+                            rmssd: scan.rmssd ?? 0.0,
+                            gradCam: typeof scan.grad_cam === "string" ? JSON.parse(scan.grad_cam) : (scan.grad_cam ?? []),
+                            strokeRiskScore: 0, 
+                            cumulativeAFibBurden: 0.0,
+                            patientId: scan.patient_id
+                        };
+                    });
+                setRealHistory(mapped);
+            }
+        } catch (err) {
+            console.error("Error fetching recent scans:", err);
+        }
+    };
+
     useEffect(() => {
         fetchPatients();
+        fetchRecentScans();
     }, []);
 
     useEffect(() => {
@@ -191,9 +244,12 @@ export default function App() {
                 method: "DELETE",
             });
             if (res.ok) {
-                await fetchPatientHistory(patientId);
+                await fetchRecentScans();
+                if (patientId) {
+                    await fetchPatientHistory(patientId);
+                }
                 await fetchPatients(); // update cumulative stats on patient card
-                if (diagnosis && (diagnosis as any).id === scanId) {
+                if (diagnosis && diagnosis.id === scanId) {
                     setDiagnosis(null);
                 }
             } else {
@@ -202,6 +258,45 @@ export default function App() {
             }
         } catch (err) {
             console.error("Error deleting scan:", err);
+        }
+    };
+
+    const updateScan = async (scanId: number, newClass: number, patientId: string) => {
+        try {
+            const res = await fetch(`http://localhost:8000/scans/${scanId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ predicted_class: newClass })
+            });
+            if (res.ok) {
+                await fetchPatients();
+                await fetchRecentScans();
+                if (patientId) {
+                    await fetchPatientHistory(patientId);
+                }
+                
+                // Update active diagnosis view locally
+                setDiagnosis(prev => {
+                    if (prev && prev.id === scanId) {
+                        let simulatedBurden = 0.0;
+                        if (newClass === 1) simulatedBurden = 4.25;
+                        else if (newClass === 2) simulatedBurden = 28.4;
+                        else if (newClass === 3) simulatedBurden = 72.8;
+
+                        return {
+                            ...prev,
+                            burdenTier: newClass as BurdenTier,
+                            burden: newClass === 0 ? 0.0 : simulatedBurden
+                        };
+                    }
+                    return prev;
+                });
+            } else {
+                const errData = await res.json();
+                alert(`Error updating scan: ${errData.detail}`);
+            }
+        } catch (err) {
+            console.error("Error updating scan:", err);
         }
     };
 
@@ -252,6 +347,7 @@ export default function App() {
             const burden = burdenTier === 0 ? 0.0 : simulatedBurden;
 
             const newDiagnosis: DiagnosisData = {
+                id: result.scan_id ? Number(result.scan_id) : undefined,
                 burdenTier: burdenTier,
                 confidence: confidence,
                 burden: burden,
@@ -269,16 +365,22 @@ export default function App() {
 
             setDiagnosis(newDiagnosis);
 
+            const { id: _, ...diagnosisWithoutId } = newDiagnosis;
             const historyItem: HistoryItem = {
-                id: Math.random().toString(36).substring(2, 9),
+                id: result.scan_id ? String(result.scan_id) : Math.random().toString(36).substring(2, 9),
                 fileName: fileName || "ecg_signal.json",
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
-                ...newDiagnosis
+                ...diagnosisWithoutId
             };
 
-            setHistory(prev => [historyItem, ...prev]);
+            if (fileName.startsWith("simulated_")) {
+                setSimulatedHistory(prev => [historyItem, ...prev]);
+            } else {
+                setRealHistory(prev => [historyItem, ...prev]);
+            }
 
             fetchPatients();
+            fetchRecentScans();
             if (patientIdToUse) {
                 fetchPatientHistory(patientIdToUse);
             }
@@ -291,6 +393,7 @@ export default function App() {
 
     const loadHistoryItem = (item: HistoryItem) => {
         setDiagnosis({
+            id: Number(item.id) ? Number(item.id) : undefined,
             burdenTier: item.burdenTier,
             confidence: item.confidence,
             burden: item.burden,
@@ -317,6 +420,7 @@ export default function App() {
         const currentPatient = patients.find(p => p.id === scan.patient_id);
 
         setDiagnosis({
+            id: Number(scan.id),
             burdenTier: tier,
             confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
             burden: tier === 0 ? 0.0 : simulatedBurden,
@@ -365,7 +469,10 @@ export default function App() {
                 deletePatient={deletePatient}
                 deleteScan={deleteScan}
                 loadPatientScan={loadPatientScan}
-                history={history}
+                realHistory={realHistory}
+                simulatedHistory={simulatedHistory}
+                scanSource={scanSource}
+                setScanSource={setScanSource}
                 scanFilter={scanFilter}
                 setScanFilter={setScanFilter}
                 scanSort={scanSort}
@@ -527,6 +634,7 @@ export default function App() {
                             onReset={() => {
                                 setDiagnosis(null);
                             }}
+                            onUpdateScan={updateScan}
                         />
                     </div>
                 )}

@@ -8,6 +8,7 @@ interface Props {
 	onReset: () => void;
 	patientScans?: any[];
 	activePatient?: any;
+	onUpdateScan?: (scanId: number, newClass: number, patientId: string) => Promise<void>;
 }
 
 const burdenTierMap = {
@@ -41,7 +42,7 @@ const burdenTierMap = {
 	},
 };
 
-const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, activePatient }) => {
+const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, activePatient, onUpdateScan }) => {
 	const gaugeChartRef = useRef<HTMLCanvasElement | null>(null);
 	const trendChartRef = useRef<HTMLCanvasElement | null>(null);
 	const burdenInfo = burdenTierMap[data.burdenTier];
@@ -645,6 +646,29 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 						</div>
 					</div>
 
+					{data.id && data.patientId && onUpdateScan && (
+						<div className="px-4 py-2 border border-border-subtle bg-bg-canvas flex items-center gap-3">
+							<div>
+								<p className="text-[9px] uppercase tracking-wider text-brand-secondary font-mono">Clinical Override</p>
+								<select
+									value={data.burdenTier}
+									onChange={async (e) => {
+										const newTier = Number(e.target.value);
+										if (window.confirm("Are you sure you want to clinically override this scan's AFib Burden classification?")) {
+											await onUpdateScan(data.id!, newTier, data.patientId!);
+										}
+									}}
+									className="bg-transparent border-none text-xs font-bold text-brand-primary cursor-pointer focus:outline-none p-0 h-6 font-mono active:scale-[0.98] transition-all"
+								>
+									<option value={0}>Sinus Rhythm</option>
+									<option value={1}>Micro-Burden</option>
+									<option value={2}>Intermediate Burden</option>
+									<option value={3}>High Burden / Persistent</option>
+								</select>
+							</div>
+						</div>
+					)}
+
 					<button
 						onClick={exportReport}
 						className="px-4 py-3 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
@@ -658,6 +682,40 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 					>
 						NEW SCAN
 					</button>
+				</div>
+			</div>
+
+			{/* Patient Profile Card (Placeholder Picture) */}
+			<div className="bg-card-bg border border-border-subtle p-5 shadow-xs flex items-center gap-4 animate-in fade-in duration-300">
+				{/* Placeholder Profile Picture */}
+				<div className="w-16 h-16 bg-bg-canvas border border-border-subtle flex items-center justify-center shrink-0 rounded-none overflow-hidden relative group">
+					{activePatient && activePatient.picture_url ? (
+						<img src={activePatient.picture_url} alt="Profile" className="w-full h-full object-cover" />
+					) : (
+						<div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400">
+							<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+								<path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+							</svg>
+						</div>
+					)}
+				</div>
+				<div>
+					<p className="text-[9px] font-mono text-zinc-500 font-bold uppercase tracking-wider">Targeted Clinical Profile</p>
+					{activePatient ? (
+						<>
+							<h2 className="text-lg font-bold text-brand-primary leading-tight">{activePatient.name}</h2>
+							<p className="text-xs text-brand-secondary font-mono mt-0.5 uppercase">
+								ID: {activePatient.id} • {activePatient.gender} • {activePatient.age} Y/O
+							</p>
+						</>
+					) : (
+						<>
+							<h2 className="text-lg font-bold text-brand-secondary italic leading-tight">Anonymous Scan Profile</h2>
+							<p className="text-xs text-brand-secondary font-mono mt-0.5 uppercase">
+								No patient targeted • Scans will save under default clinical profile
+							</p>
+						</>
+					)}
 				</div>
 			</div>
 
