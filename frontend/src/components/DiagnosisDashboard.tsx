@@ -631,25 +631,25 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 				
 				<div className="flex items-center gap-3 flex-wrap">
 					{/* Status Pill */}
-					<div className={`px-4 py-2 border flex items-center gap-3 ${burdenInfo.bg} ${burdenInfo.border}`}>
-						<div>
-							<p className="text-[9px] uppercase tracking-wider opacity-75 font-mono">Burden Status</p>
-							<p className={`text-base font-bold ${burdenInfo.color}`}>
+					<div className={`h-12 border flex items-center gap-3 px-4 shrink-0 ${burdenInfo.bg} ${burdenInfo.border}`}>
+						<div className="flex flex-col justify-center">
+							<p className="text-[9px] uppercase tracking-wider opacity-75 font-mono leading-none">Burden Status</p>
+							<p className={`text-sm font-bold mt-1 ${burdenInfo.color} whitespace-nowrap leading-none`}>
 								{burdenInfo.label}
 							</p>
 						</div>
-						<div className="border-l border-border-subtle pl-3 text-right">
-							<p className="text-[9px] uppercase tracking-wider text-text-secondary-muted font-mono">Confidence</p>
-							<p className="text-base font-bold text-brand-primary">
+						<div className="border-l border-border-subtle pl-3 flex flex-col justify-center h-8">
+							<p className="text-[9px] uppercase tracking-wider text-text-secondary-muted font-mono leading-none">Confidence</p>
+							<p className="text-sm font-bold text-brand-primary mt-1 leading-none">
 								{data.confidence}%
 							</p>
 						</div>
 					</div>
 
 					{data.id && data.patientId && onUpdateScan && (
-						<div className="px-4 py-2 border border-border-subtle bg-bg-canvas flex items-center gap-3">
-							<div>
-								<p className="text-[9px] uppercase tracking-wider text-brand-secondary font-mono">Clinical Override</p>
+						<div className="h-12 border border-border-subtle bg-bg-canvas flex items-center px-4 shrink-0">
+							<div className="flex flex-col justify-center">
+								<p className="text-[9px] uppercase tracking-wider text-brand-secondary font-mono leading-none">Clinical Override</p>
 								<select
 									value={data.burdenTier}
 									onChange={async (e) => {
@@ -658,7 +658,7 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 											await onUpdateScan(data.id!, newTier, data.patientId!);
 										}
 									}}
-									className="bg-transparent border-none text-xs font-bold text-brand-primary cursor-pointer focus:outline-none p-0 h-6 font-mono active:scale-[0.98] transition-all"
+									className="bg-transparent border-none text-xs font-bold text-brand-primary cursor-pointer focus:outline-none p-0 mt-1 h-4 font-mono active:scale-[0.98] transition-all"
 								>
 									<option value={0}>Sinus Rhythm</option>
 									<option value={1}>Micro-Burden</option>
@@ -671,14 +671,14 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 
 					<button
 						onClick={exportReport}
-						className="px-4 py-3 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+						className="h-12 flex items-center justify-center px-5 text-xs font-mono font-bold bg-status-healthy hover:bg-status-healthy-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
 					>
 						EXPORT REPORT
 					</button>
 					
 					<button
 						onClick={onReset}
-						className="px-4 py-3 text-xs font-mono font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+						className="h-12 flex items-center justify-center px-5 text-xs font-mono font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-none shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
 					>
 						NEW SCAN
 					</button>
