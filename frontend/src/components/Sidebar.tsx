@@ -87,11 +87,20 @@ export default function Sidebar({
 }: SidebarProps) {
     return (
         <div className="w-80 shrink-0 bg-card-bg border-r border-border-subtle p-6 flex flex-col h-screen sticky top-0 overflow-y-auto z-10 shadow-md">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border-subtle">
-                <h2 className="text-lg font-bold font-mono tracking-wide text-text-primary">ECG REGISTRY</h2>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border-subtle gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <img 
+                        src="https://upload.wikimedia.org/wikipedia/en/f/f8/Mapua_Uni_logo.svg" 
+                        alt="Mapúa University Logo" 
+                        className="h-6 w-auto shrink-0" 
+                    />
+                    <h2 className="text-[10.5px] font-bold font-mono tracking-wider text-text-primary leading-tight uppercase truncate">
+                        GTT - AFib Detection
+                    </h2>
+                </div>
                 <button 
                     onClick={() => setDiagnosis(null)}
-                    className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary-light hover:bg-brand-primary-light-border text-brand-primary border border-brand-primary-light-border rounded-none cursor-pointer active:scale-95"
+                    className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary-light hover:bg-brand-primary-light-border text-brand-primary border border-brand-primary-light-border rounded-none cursor-pointer active:scale-95 shrink-0"
                 >
                     HELP
                 </button>
