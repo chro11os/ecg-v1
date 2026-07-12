@@ -168,18 +168,26 @@ async def update_patient(patient_id: str, patient: PatientCreate):
     try:
         cursor.execute("SELECT 1 FROM patients WHERE id = ?", (patient_id,))
         if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Patient not found")
+            cursor.execute("""
+                INSERT INTO patients (id, name, age, gender, hypertension, diabetes, stroke_history, vascular_disease, heart_failure)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                patient_id, patient.name, patient.age, patient.gender,
+                patient.hypertension, patient.diabetes, patient.stroke_history,
+                patient.vascular_disease, patient.heart_failure
+            ))
+        else:
+            cursor.execute("""
+                UPDATE patients 
+                SET name = ?, age = ?, gender = ?, hypertension = ?, diabetes = ?, 
+                    stroke_history = ?, vascular_disease = ?, heart_failure = ?
+                WHERE id = ?
+            """, (
+                patient.name, patient.age, patient.gender,
+                patient.hypertension, patient.diabetes, patient.stroke_history,
+                patient.vascular_disease, patient.heart_failure, patient_id
+            ))
             
-        cursor.execute("""
-            UPDATE patients 
-            SET name = ?, age = ?, gender = ?, hypertension = ?, diabetes = ?, 
-                stroke_history = ?, vascular_disease = ?, heart_failure = ?
-            WHERE id = ?
-        """, (
-            patient.name, patient.age, patient.gender,
-            patient.hypertension, patient.diabetes, patient.stroke_history,
-            patient.vascular_disease, patient.heart_failure, patient_id
-        ))
         if patient.picture_url is not None:
             cursor.execute("""
                 INSERT OR REPLACE INTO patient_pictures (patient_id, picture_url)
@@ -190,4 +198,4 @@ async def update_patient(patient_id: str, patient: PatientCreate):
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
     conn.close()
-    return {"status": "success", "message": f"Patient {patient_id} updated."}
+    return {"status": "success", "message": f"Patient {patient_id} updated/registered."}

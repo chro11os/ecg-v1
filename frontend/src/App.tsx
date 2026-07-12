@@ -316,11 +316,35 @@ export default function App() {
         });
     };
 
-    const handleAnalysis = async (incomingSignal: number[], fileName: string, overridePatientId?: string) => {
+    const handleAnalysis = async (incomingSignal: number[], fileName: string, overridePatientId?: string, simDemographics?: any) => {
         setLoading(true);
         const startTime = performance.now();
         try {
             const patientIdToUse = overridePatientId || selectedPatientId;
+
+            // If anonymous scan and simulator demographics are provided, update #0000-0 profile first!
+            if (!patientIdToUse && simDemographics) {
+                try {
+                    await fetch("http://localhost:8000/patients/#0000-0", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: "Anonymous Scan Profile",
+                            age: simDemographics.age,
+                            gender: simDemographics.gender,
+                            hypertension: simDemographics.hypertension ? 1 : 0,
+                            diabetes: simDemographics.diabetes ? 1 : 0,
+                            stroke_history: simDemographics.stroke_history ? 1 : 0,
+                            vascular_disease: simDemographics.vascular_disease ? 1 : 0,
+                            heart_failure: simDemographics.heart_failure ? 1 : 0,
+                            picture_url: ""
+                        })
+                    });
+                } catch (updateErr) {
+                    console.error("Error updating anonymous profile demographics:", updateErr);
+                }
+            }
+
             const payload: any = { signal: incomingSignal };
             if (patientIdToUse) {
                 payload.patient_id = patientIdToUse;
@@ -527,7 +551,7 @@ export default function App() {
                                         />
                                     ) : (
                                         <ECGSimulatorPanel
-                                            onAnalyze={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
+                                            onAnalyze={(signal, name, simDemographics) => handleAnalysis(signal, name, selectedPatientId, simDemographics)}
                                             patientName={patients.find(p => p.id === selectedPatientId)?.name}
                                         />
                                     )}

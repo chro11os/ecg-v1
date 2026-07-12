@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { generateECGData } from "../utils/ecgSimulator";
 
 interface ECGSimulatorPanelProps {
-    onAnalyze: (signal: number[], fileName: string) => void;
+    onAnalyze: (signal: number[], fileName: string, simDemographics?: any) => void;
     patientName?: string;
 }
 
@@ -16,6 +16,30 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
     const [simulationCompleted, setSimulationCompleted] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+
+    // Simulator Demographics (CHA2DS2-VASc checklist)
+    const [simAge, setSimAge] = useState<number>(65);
+    const [simGender, setSimGender] = useState<string>("male");
+    const [simCHF, setSimCHF] = useState<boolean>(false);
+    const [simHTN, setSimHTN] = useState<boolean>(false);
+    const [simDM, setSimDM] = useState<boolean>(false);
+    const [simStroke, setSimStroke] = useState<boolean>(false);
+    const [simVascular, setSimVascular] = useState<boolean>(false);
+
+    const calculatedScore = (() => {
+        let score = 0;
+        if (simCHF) score += 1;
+        if (simHTN) score += 1;
+        if (simAge >= 75) score += 2;
+        else if (simAge >= 65) score += 1;
+        if (simDM) score += 1;
+        if (simStroke) score += 2;
+        if (simVascular) score += 1;
+        if (simGender === "female") score += 1;
+        return score;
+    })();
+
+    const riskCategory = calculatedScore >= 2 ? "HIGH RISK" : calculatedScore === 1 ? "MODERATE" : "LOW RISK";
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const animationRef = useRef<number | null>(null);
@@ -270,7 +294,15 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                         setTimeout(() => {
                             setIsAnalyzing(false);
                             const fileName = `simulated_${rhythm}_${Date.now().toString().slice(-6)}.json`;
-                            onAnalyze(simulatedSignalRef.current, fileName);
+                            onAnalyze(simulatedSignalRef.current, fileName, !patientName ? {
+                                age: simAge,
+                                gender: simGender,
+                                hypertension: simHTN,
+                                diabetes: simDM,
+                                stroke_history: simStroke,
+                                vascular_disease: simVascular,
+                                heart_failure: simCHF
+                            } : undefined);
                         }, 400);
                     }
                 }, (index + 1) * 350);
@@ -405,6 +437,66 @@ export default function ECGSimulatorPanel({ onAnalyze, patientName }: ECGSimulat
                             <span className="text-brand-secondary">&gt;</span>
                             <span className="w-1.5 h-3 bg-text-primary animate-pulse" />
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CHA2DS2-VASc Comorbidities Form for Anonymous Simulator */}
+            {!patientName && (
+                <div className="border border-border-subtle p-4 bg-bg-canvas space-y-3">
+                    <p className="text-[10px] font-mono font-bold text-brand-secondary uppercase border-b border-border-subtle pb-1 tracking-wider">
+                        Anonymous Simulation Demographics & Comorbidities (CHA₂DS₂-VASc)
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-[9px] font-mono text-brand-secondary uppercase">Age</label>
+                            <input
+                                type="number"
+                                value={simAge}
+                                onChange={(e) => setSimAge(Number(e.target.value))}
+                                className="w-full bg-card-bg border border-border-subtle text-xs p-1.5 mt-0.5 rounded-none font-mono focus:outline-none focus:border-brand-primary"
+                                min={0}
+                                max={120}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-mono text-brand-secondary uppercase">Gender</label>
+                            <select
+                                value={simGender}
+                                onChange={(e) => setSimGender(e.target.value)}
+                                className="w-full bg-card-bg border border-border-subtle text-xs p-1.5 mt-0.5 rounded-none font-mono focus:outline-none focus:border-brand-primary"
+                            >
+                                <option value="male">MALE</option>
+                                <option value="female">FEMALE</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col justify-end">
+                            <div className="text-[10px] font-mono text-brand-primary font-bold">
+                                Score: {calculatedScore} PTS ({riskCategory})
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-dashed border-border-subtle">
+                        <label className="flex items-center gap-1.5 text-[9px] font-mono cursor-pointer select-none">
+                            <input type="checkbox" checked={simCHF} onChange={(e) => setSimCHF(e.target.checked)} />
+                            Congestive HF (+1)
+                        </label>
+                        <label className="flex items-center gap-1.5 text-[9px] font-mono cursor-pointer select-none">
+                            <input type="checkbox" checked={simHTN} onChange={(e) => setSimHTN(e.target.checked)} />
+                            Hypertension (+1)
+                        </label>
+                        <label className="flex items-center gap-1.5 text-[9px] font-mono cursor-pointer select-none">
+                            <input type="checkbox" checked={simDM} onChange={(e) => setSimDM(e.target.checked)} />
+                            Diabetes (+1)
+                        </label>
+                        <label className="flex items-center gap-1.5 text-[9px] font-mono cursor-pointer select-none">
+                            <input type="checkbox" checked={simStroke} onChange={(e) => setSimStroke(e.target.checked)} />
+                            Stroke / TIA (+2)
+                        </label>
+                        <label className="flex items-center gap-1.5 text-[9px] font-mono cursor-pointer select-none">
+                            <input type="checkbox" checked={simVascular} onChange={(e) => setSimVascular(e.target.checked)} />
+                            Vascular Disease (+1)
+                        </label>
                     </div>
                 </div>
             )}
