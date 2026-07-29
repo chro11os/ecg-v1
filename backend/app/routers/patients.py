@@ -49,11 +49,11 @@ async def create_patient(patient: PatientCreate):
             patient_id = generate_unique_patient_id(conn)
             
         cursor.execute("""
-            INSERT OR REPLACE INTO patients (id, name, age, gender, hypertension, diabetes, stroke_history, vascular_disease, heart_failure)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO patients (id, name, age, gender, hypertension, diabetes, obesity, stroke_history, vascular_disease, heart_failure)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             patient_id, patient.name, patient.age, patient.gender,
-            patient.hypertension, patient.diabetes, patient.stroke_history,
+            patient.hypertension, patient.diabetes, patient.obesity, patient.stroke_history,
             patient.vascular_disease, patient.heart_failure
         ))
         if patient.picture_url:
@@ -169,22 +169,22 @@ async def update_patient(patient_id: str, patient: PatientCreate):
         cursor.execute("SELECT 1 FROM patients WHERE id = ?", (patient_id,))
         if not cursor.fetchone():
             cursor.execute("""
-                INSERT INTO patients (id, name, age, gender, hypertension, diabetes, stroke_history, vascular_disease, heart_failure)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO patients (id, name, age, gender, hypertension, diabetes, obesity, stroke_history, vascular_disease, heart_failure)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 patient_id, patient.name, patient.age, patient.gender,
-                patient.hypertension, patient.diabetes, patient.stroke_history,
+                patient.hypertension, patient.diabetes, patient.obesity, patient.stroke_history,
                 patient.vascular_disease, patient.heart_failure
             ))
         else:
             cursor.execute("""
                 UPDATE patients 
-                SET name = ?, age = ?, gender = ?, hypertension = ?, diabetes = ?, 
+                SET name = ?, age = ?, gender = ?, hypertension = ?, diabetes = ?, obesity = ?,
                     stroke_history = ?, vascular_disease = ?, heart_failure = ?
                 WHERE id = ?
             """, (
                 patient.name, patient.age, patient.gender,
-                patient.hypertension, patient.diabetes, patient.stroke_history,
+                patient.hypertension, patient.diabetes, patient.obesity, patient.stroke_history,
                 patient.vascular_disease, patient.heart_failure, patient_id
             ))
             

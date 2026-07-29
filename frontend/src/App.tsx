@@ -33,6 +33,7 @@ export default function App() {
         gender: "male",
         hypertension: false,
         diabetes: false,
+        obesity: false,
         stroke_history: false,
         vascular_disease: false,
         heart_failure: false,
@@ -40,13 +41,14 @@ export default function App() {
 
     const [previewId, setPreviewId] = useState("");
     const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
+    const [continuousLoadingMode, setContinuousLoadingMode] = useState<"real_online" | "synthetic_simulation" | null>(null);
 
     // Scan Filter and Sorting
     const [scanFilter, setScanFilter] = useState<string>("ALL");
     const [scanSort, setScanSort] = useState<string>("NEWEST");
 
     // Workstation & Simulator Tabs
-    const [activeWorkstationTab, setActiveWorkstationTab] = useState<"UPLOAD" | "SIMULATE">("UPLOAD");
+    const [activeWorkstationTab, setActiveWorkstationTab] = useState<"UPLOAD" | "SIMULATE" | "CONTINUOUS">("UPLOAD");
     const [anonymousTab, setAnonymousTab] = useState<"INFO" | "SIMULATE">("INFO");
 
     const fetchNextId = async () => {
@@ -176,6 +178,7 @@ export default function App() {
                     gender: newPatient.gender,
                     hypertension: newPatient.hypertension ? 1 : 0,
                     diabetes: newPatient.diabetes ? 1 : 0,
+                    obesity: newPatient.obesity ? 1 : 0,
                     stroke_history: newPatient.stroke_history ? 1 : 0,
                     vascular_disease: newPatient.vascular_disease ? 1 : 0,
                     heart_failure: newPatient.heart_failure ? 1 : 0,
@@ -202,6 +205,7 @@ export default function App() {
                     gender: "male",
                     hypertension: false,
                     diabetes: false,
+                    obesity: false,
                     stroke_history: false,
                     vascular_disease: false,
                     heart_failure: false,
@@ -310,10 +314,60 @@ export default function App() {
             gender: patient.gender,
             hypertension: patient.hypertension === 1,
             diabetes: patient.diabetes === 1,
+            obesity: patient.obesity === 1,
             stroke_history: patient.stroke_history === 1,
             vascular_disease: patient.vascular_disease === 1,
             heart_failure: patient.heart_failure === 1,
         });
+    };
+
+    const runContinuousScan = async (mode: "real_online" | "synthetic_simulation") => {
+        const patientIdToUse = selectedPatientId || "#0000-0";
+        setLoading(true);
+        setContinuousLoadingMode(mode);
+        try {
+            const res = await fetch("http://localhost:8000/predict/continuous", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    patient_id: patientIdToUse,
+                    mode: mode
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const burdenVal = data.classification === "Sinus Rhythm" ? 0 : data.classification === "Paroxysmal" ? 1 : data.classification === "Persistent" ? 2 : 3;
+                const diagnosisResult: DiagnosisData = {
+                    burdenTier: burdenVal as BurdenTier,
+                    confidence: Math.round(data.confidence * 100.0),
+                    burden: Math.round(data.afib_burden),
+                    hardware: mode === "real_online" ? "PhysioNet Cloud" : "Local Engine",
+                    responseTime: mode === "real_online" ? 1420 : 350,
+                    rawSignal: data.signal,
+                    rPeaks: data.r_peaks,
+                    rrVariance: data.rr_variance,
+                    rmssd: data.rmssd,
+                    gradCam: data.grad_cam,
+                    classification: data.classification,
+                    total_duration_hours: data.total_duration_hours,
+                    type: data.type,
+                    patientId: patientIdToUse
+                };
+                setDiagnosis(diagnosisResult);
+                await fetchPatients();
+                if (selectedPatientId) {
+                    await fetchPatientHistory(selectedPatientId);
+                }
+            } else {
+                const errData = await res.json();
+                alert(`Error executing continuous monitor scan: ${errData.detail}`);
+            }
+        } catch (err) {
+            console.error("Error executing continuous monitor scan:", err);
+        } finally {
+            setLoading(false);
+            setContinuousLoadingMode(null);
+        }
     };
 
     const handleAnalysis = async (incomingSignal: number[], fileName: string, overridePatientId?: string, simDemographics?: any) => {
@@ -526,7 +580,7 @@ export default function App() {
                                         className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
                                             activeWorkstationTab === "UPLOAD"
                                                 ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
+                                                : "text-zinc-400 hover:text-text-primary"
                                         }`}
                                     >
                                         UPLOAD FILE
@@ -536,10 +590,20 @@ export default function App() {
                                         className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
                                             activeWorkstationTab === "SIMULATE"
                                                 ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
+                                                : "text-zinc-400 hover:text-text-primary"
                                         }`}
                                     >
-                                        RUN SIMULATION
+                                        ECG SIMULATOR
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveWorkstationTab("CONTINUOUS")}
+                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
+                                            activeWorkstationTab === "CONTINUOUS"
+                                                ? "bg-card-bg text-brand-primary shadow-xs"
+                                                : "text-zinc-400 hover:text-text-primary"
+                                        }`}
+                                    >
+                                        CONTINUOUS MONITOR
                                     </button>
                                 </div>
                                 
@@ -549,11 +613,46 @@ export default function App() {
                                             onDataLoaded={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
                                             onError={(msg) => alert(msg)}
                                         />
-                                    ) : (
+                                    ) : activeWorkstationTab === "SIMULATE" ? (
                                         <ECGSimulatorPanel
                                             onAnalyze={(signal, name, simDemographics) => handleAnalysis(signal, name, selectedPatientId, simDemographics)}
                                             patientName={patients.find(p => p.id === selectedPatientId)?.name}
                                         />
+                                    ) : (
+                                        <div className="space-y-4 font-mono text-xs">
+                                            <p className="text-zinc-400">
+                                                Long-term ECG monitoring tracks arrhythmia duration to evaluate clinical burden.
+                                            </p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="border border-border-subtle p-4 bg-card-bg hover:border-brand-primary transition-all">
+                                                    <h5 className="font-bold text-text-primary uppercase mb-1">Option A: Online Fetch</h5>
+                                                    <p className="text-[10.5px] text-brand-secondary mb-3">
+                                                        Downloads a random 70-minute continuous segment directly from PhysioNet Icentia11k.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => runContinuousScan("real_online")}
+                                                        disabled={loading}
+                                                        className="w-full py-2 bg-brand-primary text-white hover:bg-brand-primary-hover font-bold cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                                                    >
+                                                        {continuousLoadingMode === "real_online" ? "DOWNLOADING & PARSING..." : "FETCH REAL STREAM"}
+                                                    </button>
+                                                </div>
+
+                                                <div className="border border-border-subtle p-4 bg-card-bg hover:border-brand-primary transition-all">
+                                                    <h5 className="font-bold text-text-primary uppercase mb-1">Option B: Simulation</h5>
+                                                    <p className="text-[10.5px] text-brand-secondary mb-3">
+                                                        Simulates custom duration streams based on patient risk factors and comorbidities.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => { setContinuousLoadingMode("synthetic_simulation"); runContinuousScan("synthetic_simulation"); }}
+                                                        disabled={loading}
+                                                        className="w-full py-2 bg-status-healthy text-white hover:bg-status-healthy-hover font-bold cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                                                    >
+                                                        {continuousLoadingMode === "synthetic_simulation" ? "SIMULATING..." : "RUN SIMULATION"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>

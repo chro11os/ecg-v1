@@ -8,6 +8,7 @@ class PatientCreate(BaseModel):
     gender: str
     hypertension: int = 0
     diabetes: int = 0
+    obesity: int = 0
     stroke_history: int = 0
     vascular_disease: int = 0
     heart_failure: int = 0

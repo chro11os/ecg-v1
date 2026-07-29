@@ -89,6 +89,13 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 			active: patient.diabetes === 1
 		});
 		
+		// Obesity
+		breakdown.push({
+			criteria: "Obesity (AFib Risk Factor)",
+			pts: 0,
+			active: patient.obesity === 1
+		});
+		
 		// Stroke
 		breakdown.push({
 			criteria: "Stroke / TIA History",
@@ -645,6 +652,23 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 							</p>
 						</div>
 					</div>
+
+					{data.classification && (
+						<div className="h-12 border border-slate-700 bg-bg-canvas flex items-center gap-3 px-4 shrink-0">
+							<div className="flex flex-col justify-center">
+								<p className="text-[9px] uppercase tracking-wider text-brand-secondary font-mono leading-none">Clinical Classification</p>
+								<p className="text-sm font-bold mt-1 text-brand-primary whitespace-nowrap leading-none">
+									{data.classification}
+								</p>
+							</div>
+							<div className="border-l border-border-subtle pl-3 flex flex-col justify-center h-8">
+								<p className="text-[9px] uppercase tracking-wider text-brand-secondary font-mono leading-none">Monitor Duration</p>
+								<p className="text-sm font-bold text-status-healthy mt-1 leading-none">
+									{data.total_duration_hours ? `${data.total_duration_hours.toFixed(1)} hrs` : "N/A"}
+								</p>
+							</div>
+						</div>
+					)}
 
 					{data.id && data.patientId && onUpdateScan && (
 						<div className="h-12 border border-border-subtle bg-bg-canvas flex items-center px-4 shrink-0">

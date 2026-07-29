@@ -24,9 +24,30 @@ def init_db():
             gender TEXT NOT NULL,
             hypertension INTEGER DEFAULT 0,
             diabetes INTEGER DEFAULT 0,
+            obesity INTEGER DEFAULT 0,
             stroke_history INTEGER DEFAULT 0,
             vascular_disease INTEGER DEFAULT 0,
             heart_failure INTEGER DEFAULT 0
+        )
+    """)
+    
+    # Run migration to add obesity to existing DB tables
+    try:
+        cursor.execute("ALTER TABLE patients ADD COLUMN obesity INTEGER DEFAULT 0;")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Create monitoring_sessions table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS monitoring_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id TEXT NOT NULL,
+            type TEXT NOT NULL, -- 'real_online' or 'synthetic_simulation'
+            start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            end_time DATETIME,
+            classification TEXT, -- 'Paroxysmal', 'Persistent', 'Long-standing Persistent', 'Sinus Rhythm'
+            total_duration_hours REAL,
+            FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
         )
     """)
     
@@ -63,3 +84,4 @@ def init_db():
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully.")
+

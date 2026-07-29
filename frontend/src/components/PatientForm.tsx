@@ -11,6 +11,7 @@ interface PatientFormProps {
         gender: string;
         hypertension: boolean;
         diabetes: boolean;
+        obesity: boolean;
         stroke_history: boolean;
         vascular_disease: boolean;
         heart_failure: boolean;
@@ -94,6 +95,10 @@ export default function PatientForm({
                 <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
                     <input type="checkbox" checked={newPatient.diabetes} onChange={e => setNewPatient((prev: any) => ({ ...prev, diabetes: e.target.checked }))} />
                     Diabetes (+1)
+                </label>
+                <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
+                    <input type="checkbox" checked={newPatient.obesity} onChange={e => setNewPatient((prev: any) => ({ ...prev, obesity: e.target.checked }))} />
+                    Obesity (AFib Risk Factor)
                 </label>
                 <label className="flex items-center gap-1.5 text-[10px] font-mono cursor-pointer">
                     <input type="checkbox" checked={newPatient.stroke_history} onChange={e => setNewPatient((prev: any) => ({ ...prev, stroke_history: e.target.checked }))} />

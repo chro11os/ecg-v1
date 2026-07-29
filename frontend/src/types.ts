@@ -8,6 +8,7 @@ export interface Patient {
     gender: string;
     hypertension: number;
     diabetes: number;
+    obesity: number;
     stroke_history: number;
     vascular_disease: number;
     heart_failure: number;
@@ -31,4 +32,8 @@ export interface DiagnosisData {
     strokeRiskScore?: number;       // CHA2DS2-VASc score
     cumulativeAFibBurden?: number;  // Aggregated percentage
     patientId?: string;
+    session_id?: number;
+    type?: string;
+    classification?: string;
+    total_duration_hours?: number;
 }
