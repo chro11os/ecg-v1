@@ -1,100 +1,75 @@
 # GTT - AFib Detection & Assessment Tool
 
-This project classifies the severity of Atrial Fibrillation (AFib) in patients using 1D electrocardiogram (ECG) voltage signals. It includes a deep learning model, an SQLite database-backed web API backend, and an interactive frontend workstation with model explainability (Grad-CAM heatmaps), real-time ECG simulation, and clinical CDSS risk assessments.
+This project classifies Atrial Fibrillation (AFib) burden in patients using 1D electrocardiogram (ECG) voltage signals. It includes a 1D CNN-LSTM deep learning model, an SQLite database-backed FastAPI backend, and an interactive workstation featuring model explainability (Grad-CAM heatmaps), HRV metrics (RMSSD, R-R variance), longitudinal burden tracking, and clinical CDSS risk assessments (CHA₂DS₂-VASc).
 
 ---
 
 ## Core Project Facts
 
-### 1. Goal & Burden Tiers
-The system classifies ECG recordings into one of four clinical **AFib Burden Tiers** based on the temporal ratio of active AFib segments in a 10s recording:
+### 1. AFib Burden Tiers
+The system classifies ECG recordings into four clinical **AFib Burden Tiers** based on the temporal ratio of active AFib segments in a 10s recording:
 * **Sinus Rhythm (Tier 0):** 0.0% AFib burden.
 * **Micro-Burden / Rare Paroxysm (Tier 1):** Less than 5.0% AFib burden.
-* **Intermediate Burden / Active Paroxysm (Tier 2):** Between 5.0% and 50.0% AFib burden.
+* **Intermediate Burden / Active Paroxysm (Tier 2):** 5.0% to 50.0% AFib burden.
 * **High Burden / Persistent AFib (Tier 3):** Greater than 50.0% AFib burden.
 
-### 2. Dataset
-* **Source:** PhysioNet Icentia11k ECG database (single-lead ECG recorded at 250 Hz).
-* **Local Size:** 21,033 patient files (including subsets `p00`, `p01`, and `p02`).
-* **Distribution:** 95.38% Normal, 0.01% Trace, 0.02% Mild, and 4.59% Severe.
+### 2. Clinical CDSS & Longitudinal Tracking
+* **Temporal Ratio Burden:** Computes the percentage of 2-second windows showing active AFib within a scan.
+* **Longitudinal Cumulative Burden:** Tracks historical patient scan trends over time.
+* **CHA₂DS₂-VASc Assessment:** Calculates stroke risk score based on demographic and comorbidity profiles (Congestive Heart Failure, Hypertension, Age, Diabetes, Stroke/TIA history, Vascular Disease, Sex).
 
-### 3. Signal Processing
-Before inference, raw ECG inputs go through the following steps:
-1. **Bandpass Filter:** A 4th-order Butterworth filter ($0.5\text{ Hz} - 45\text{ Hz}$) removes breathing movement drift and high-frequency noise.
-2. **Normalization:** Voltage amplitudes are scaled between `0.0` and `1.0`.
-3. **Segmentation:** Signals are sliced into 2-second windows (exactly 500 samples).
+### 3. Database Schema & Patient IDs
+* **Database:** SQLite (`backend/ecg_records.db`).
+* **Candidate IDs:** Clinical IDs generated via backend (`GET /patients/next-id`) using format `#XXXX-X`.
+* **Tables:** 
+  * `patients`: Stores patient demographics and comorbidity flags.
+  * `scans`: Stores prediction metadata (`signal_data`, `predicted_class`, `confidence`, `rr_variance`, `rmssd`, `r_peaks`, `grad_cam`, `timestamp`).
 
-### 4. Model Architecture (1D CNN-LSTM)
-* **Spatial Layer (CNN):** Extracts shape features (QRS complexes, wave slopes) using two 1D Conv layers (64 and 128 filters).
-* **Rhythm Layer (LSTM):** Tracks time interval fluctuations between beats using 64 hidden units.
-* **Regularization:** A 0.3 Dropout layer prevents overfitting.
-* **Classifier:** A final linear layer maps features to the 4 Burden Tiers.
-* **Explainability (Grad-CAM):** Computes gradients from the final Conv1d layer to identify which parts of the 2-second waveform triggered the model's decision, returning a 500-value heatmap.
+### 4. Signal Processing & HRV Metrics
+1. **Bandpass Filter:** 4th-order Butterworth filter ($0.5\text{ Hz} - 45\text{ Hz}$) to remove baseline wander and noise.
+2. **Normalization:** Voltage amplitudes scaled between `0.0` and `1.0`.
+3. **Segmentation:** Signals sliced into 2-second windows (500 samples each).
+4. **HRV Analysis:** Computes R-peak locations, R-R variance, and Root Mean Square of Successive Differences (RMSSD).
 
-### 5. Training & Evaluation
-* **Addressing Imbalance:** Because 95% of the data is normal, the model was trained on a balanced set of **4,000 files (1,000 per class)** using random oversampling and undersampling.
-* **Performance:** Evaluated on an unseen 15% testing split (3,159 records), the balanced model achieves **63.91% Accuracy** and correctly identifies **40.4% of all Severe AFib cases** (40.4% Recall).
+### 5. Model Architecture & XAI (1D CNN-LSTM)
+* **Spatial Layer (CNN):** 2x 1D Conv layers (64 & 128 filters) extracting QRS wave shapes and slopes.
+* **Temporal Layer (LSTM):** 64 hidden units modeling beat-to-beat interval dynamics.
+* **Explainability (Grad-CAM):** Gradient-weighted Class Activation Mapping generating a 500-point heatmap for wave segments.
 
 ---
 
 ## Interactive Workstation Features
 
-### 1. Bedside ECG Simulator
-* Generates real-time Lead I ECG waveforms using dynamic R-R intervals and flat T-waves tailored to reflect authentic clinical Sinus Rhythm or Atrial Fibrillation.
-* Includes heart monitor audio beep sound controls and flash indicators.
-
-### 2. Simulated Demographics & CHA₂DS₂-VASc Form
-* Enables testing stroke risk factors directly on the ECG Simulator using custom Age, Gender, and Comorbidities checklists (HF, Hypertension, Diabetes, Stroke, Vascular Disease).
-* Automatically upserts simulation configurations to the anonymous clinical database profile.
-
-### 3. Trust-Building Developer Log Console
-* Simulates sequential DSP filtering, LSTM model forward passes, and XAI Grad-CAM gradient mapping inside a staggered terminal logging interface to build diagnostic trust ("Labor Illusion").
-
-### 4. Split-Pane Registry Tabs
-* Separates Patients list records (supporting creations, edits, and deletions) from the global Scans history, dividing persistent clinical records from temporary session simulations.
+* **Split-Pane Navigation:** Patient registry sidebar for patient context switching, registration, and targeting.
+* **Targeted Scan Workspace:** Targeted patient dropzone for uploading raw 1D ECG signals.
+* **Diagnostic Dashboard:** Full-width view with Grad-CAM wave charts, HRV stats, CHA₂DS₂-VASc card, and longitudinal trend lines.
+* **Bedside ECG Simulator:** Real-time synthetic Lead I ECG simulator with heart monitor audio feedback and dynamic demographic risk forms.
 
 ---
 
 ## Installation & Setup
 
-### Backend Dependencies (Python)
-Make sure you have python 3.10+ installed. Install the required libraries in your environment:
-```bash
-pip install -r requirements.txt
-```
-*Key Packages:* `torch` (PyTorch), `fastapi` (API), `uvicorn` (Server), `scipy` (Filters/Peak detection), `wfdb` (PhysioNet file reader), `scikit-learn` (Metrics), `matplotlib` (Plotting).
+### Prerequisites
+* Python 3.10+
+* Node.js 18+
 
-### Frontend Dependencies (Node.js)
-Navigate to the `frontend/` folder and install packages:
-```bash
-cd frontend
-npm install
-```
-*Key Packages:* `react`, `chart.js` & `react-chartjs-2` (Waveform plotting), `chartjs-plugin-zoom` (ECG panning/zooming), `react-dropzone` (File drag-and-drop).
-
----
-
-## How to Run the Project
-
-### The Single-Command Bootloader (Recommended)
-You can start both the backend FastAPI server and the Vite dev server concurrently using the clinical bootloader script in the root directory:
+### Single-Command Bootloader
 ```bash
 ./start.sh
 ```
-This script handles building, port check bindings, and outputs color-coded direct localhost links in your terminal.
 
-Alternatively, you can run them in separate terminals:
+### Manual Execution
 
-#### Start the Backend Server:
+#### Backend Server (FastAPI)
 ```bash
+pip install -r requirements.txt
 uvicorn backend.server:app --port 8000 --host 0.0.0.0
 ```
-This starts the FastAPI server. It will load the trained weights file (`afib_cnn_lstm_v1.pt`) and automatically run on your GPU if available, falling back to CPU if not.
 
-#### Start the Frontend App:
-In a new terminal window, navigate to the `frontend/` folder and start the dev server:
+#### Frontend Workstation (React + Vite)
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
@@ -102,29 +77,15 @@ npm run dev
 
 ## Model Pipeline & Benchmarks
 
-If you need to rebuild the metadata cache or retrain the main thesis model:
-
-### 1. Build the Metadata Cache (Multicore Scan)
-Build the index of patient files and labels. This script runs in parallel across all CPU cores:
 ```bash
+# Build metadata cache
 python ml_pipeline/build_metadata_cache.py
-```
 
-### 2. Train Our Model
-Train the 1D CNN-LSTM architecture on the balanced 4,000-record dataset:
-```bash
+# Train 1D CNN-LSTM model
 python ml_pipeline/train_balanced.py
-```
-This saves the weights to `afib_cnn_lstm_v1.pt` and synchronizes them to the root and backend folders.
 
-### 3. Run Comparative Benchmarks
-To train the comparative baseline architectures and run the master evaluation:
-```bash
+# Run comparison models & benchmarks
 python comparison_models/prepare_splits.py
 python comparison_models/train_comparison.py
 python comparison_models/benchmark.py
 ```
-* **Outputs:** 
-  * Prints the benchmarking comparison table in the console.
-  * Saves plotted ROC curves to `comparison_models/roc_curves.png`.
-  * Exports metrics and confusion matrices to `comparison_models/benchmark_results.json`.
