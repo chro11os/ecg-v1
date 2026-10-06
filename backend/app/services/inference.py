@@ -1,42 +1,47 @@
 import os
 import sys
-import torch
+
 import numpy as np
+import torch
 
 # Ensure root is in sys.path to import model.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from model import AFCNN_LSTM, compute_grad_cam
+from model import WINDOW, AFCNN_LSTM, afib_probabilities, burden_tier, compute_grad_cam, preprocess
 from backend.app.config import DEVICE, WEIGHTS_PATH
 
-# Instantiate and load model
-model = AFCNN_LSTM(num_classes=4)
+model = AFCNN_LSTM()
+model_loaded = False
 try:
-    if os.path.exists(WEIGHTS_PATH):
-        model.load_state_dict(torch.load(WEIGHTS_PATH, map_location=DEVICE))
-        print("Successfully loaded model weights.")
-    else:
-        print(f"Weights file not found at {WEIGHTS_PATH}. Running with uninitialized weights.")
+    model.load_state_dict(torch.load(WEIGHTS_PATH, map_location=DEVICE, weights_only=True))
+    model_loaded = True
+    print("Successfully loaded model weights.")
 except Exception as e:
-    print(f"WARNING: Could not load model weights ({e}). Model inference will use uninitialized weights.")
+    print(f"WARNING: Could not load model weights from {WEIGHTS_PATH} ({e}). /predict is disabled until "
+          "the model is trained with ml_pipeline/train.py.")
 
 model.to(DEVICE)
 model.eval()
 
-def run_model_inference(normalized_signal: np.ndarray) -> tuple[int, float, list[float]]:
-    x = torch.tensor(normalized_signal, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(DEVICE)
-    
-    with torch.no_grad():
-        logits = model(x)
-        probs = torch.softmax(logits, dim=1)
-        conf, pred = torch.max(probs, dim=1)
 
-    severity_class = int(pred.item())
-    confidence = float(conf.item())
+def run_model_inference(raw_signal: np.ndarray) -> tuple[int, float, float, list[float], list[float]]:
+    """
+    Classify every 2 s window of the signal as AFib / non-AFib and measure burden from those windows.
+    Returns (tier, confidence, burden %, per-window P(AFib), Grad-CAM over the whole signal).
+    """
+    probs = afib_probabilities(model, raw_signal, DEVICE)
+    is_afib = probs >= 0.5
+    burden = float(is_afib.mean())
+    confidence = float(np.where(is_afib, probs, 1 - probs).mean())
 
-    # Compute Grad-CAM explainability maps (500 values scaled [0, 1])
-    grad_cam_values = compute_grad_cam(model, x, severity_class)
+    # Grad-CAM per window for the class it was assigned, concatenated to match the signal length
+    windows = preprocess(np.asarray(raw_signal, dtype=np.float64).reshape(-1, WINDOW))
+    grad_cam = []
+    for window, afib in zip(windows, is_afib):
+        x = torch.from_numpy(window).reshape(1, 1, -1).to(DEVICE)
+        grad_cam += compute_grad_cam(model, x, int(afib))
 
-    return severity_class, confidence, grad_cam_values
+    return burden_tier(burden), confidence, round(100.0 * burden, 2), [round(float(p), 4) for p in probs], grad_cam
+
 
 def get_hardware_info() -> str:
     if DEVICE.type == "cuda":

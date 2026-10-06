@@ -1,120 +1,103 @@
-import torch
-from torch.utils.data import Dataset
-import wfdb
+import json
+import os
+import random
+
 import numpy as np
-import scipy.signal
+import torch
+import wfdb
+from torch.utils.data import Dataset
 
-def bandpass_filter(data, lowcut=0.5, highcut=45.0, fs=250.0, order=4):
+from model import WINDOW, preprocess
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+CACHE_PATH = os.path.join(os.path.dirname(__file__), 'metadata_cache.json')
+
+
+def afib_intervals(record_path):
     """
-    Applies a Butterworth bandpass filter to remove baseline wander and high-frequency noise.
+    [(start, end)] sample ranges annotated as AFib in an Icentia11k .atr file.
+    Rhythm notes look like '(AFIB' ... ')' or '(N' ... ')'; beat notes are the string 'None'.
     """
-    nyquist = 0.5 * fs
-    low = lowcut / nyquist
-    high = highcut / nyquist
-    b, a = scipy.signal.butter(order, [low, high], btype='band')
-    return scipy.signal.filtfilt(b, a, data)
+    ann = wfdb.rdann(record_path, 'atr')
+    intervals, start = [], None
+    for sample, note in zip(ann.sample, ann.aux_note):
+        if note.startswith('(AFIB'):
+            if start is None:
+                start = int(sample)
+        elif start is not None and (note.startswith('(') or note.endswith(')')):
+            intervals.append((start, int(sample)))
+            start = None
+    if start is not None:  # episode still running at the end of the segment
+        intervals.append((start, wfdb.rdheader(record_path).sig_len))
+    return intervals
 
-def min_max_normalize(data):
+
+def afib_fraction(start, end, intervals):
+    """Fraction of [start, end) covered by AFib intervals."""
+    overlap = sum(max(0, min(end, e) - max(start, s)) for s, e in intervals)
+    return overlap / (end - start)
+
+
+def load_cache():
+    """{absolute record path: {'sig_len', 'afib'}} for every cached record present on disk."""
+    if not os.path.exists(CACHE_PATH):
+        raise SystemExit("metadata_cache.json not found. Run ml_pipeline/build_metadata_cache.py first.")
+    with open(CACHE_PATH) as f:
+        cache = json.load(f)
+    records = {os.path.join(PROJECT_ROOT, rel): meta for rel, meta in cache.items()}
+    return {p: m for p, m in records.items() if os.path.exists(p + '.dat')}
+
+
+def patient_split(records, seed=42):
     """
-    Normalizes a 1D numpy array to [0, 1] range.
+    70/15/15 split by patient folder (pXXXXX). Each patient's segments stay in one split,
+    so the test set never contains a patient the model trained on.
     """
-    min_val = np.min(data)
-    max_val = np.max(data)
-    denom = max_val - min_val
-    if denom == 0:
-        return np.zeros_like(data)
-    return (data - min_val) / denom
+    patient = lambda p: os.path.basename(os.path.dirname(p))
+    patients = sorted({patient(p) for p in records})
+    random.Random(seed).shuffle(patients)
+    a, b = int(0.70 * len(patients)), int(0.85 * len(patients))
+    which = {pid: 'train' if i < a else 'val' if i < b else 'test' for i, pid in enumerate(patients)}
+    splits = {'train': {}, 'val': {}, 'test': {}}
+    for p, meta in records.items():
+        splits[which[patient(p)]][p] = meta
+    return splits
 
-def calculate_severity_from_atr(file_path):
+
+class ECGWindowDataset(Dataset):
     """
-    Reads an Icentia11k .atr file and calculates the AF Burden severity integer.
+    2 s windows drawn from Icentia11k records. A window is labelled AFib (1) when at least
+    half of it lies inside an annotated AFib episode, so the label describes what the model sees.
+
+    windows_per_record random windows keep the natural rhythm mix; afib_windows_per_record extra
+    windows are drawn from inside AFib episodes to counter AFib's low prevalence (training only).
     """
-    try:
-        annotation = wfdb.rdann(file_path, 'atr')
-    except FileNotFoundError:
-        # Failsafe: If an annotation file is missing, default to 0.0 to prevent training crashes
-        return 0.0
 
-    sample_indices = annotation.sample  
-    symbols = annotation.symbol  
-    aux_notes = annotation.aux_note  
+    def __init__(self, records, windows_per_record=20, afib_windows_per_record=0, seed=42):
+        rng = np.random.default_rng(seed)
+        self.windows = []
+        for path, meta in sorted(records.items()):
+            n, intervals = meta['sig_len'], meta['afib']
+            starts = list(rng.integers(0, n - WINDOW + 1, windows_per_record))
 
-    total_samples = sample_indices[-1] if len(sample_indices) > 0 else 0
+            episodes = [(s, e) for s, e in intervals if e - s >= WINDOW]
+            if episodes and afib_windows_per_record:
+                room = np.array([e - s - WINDOW + 1 for s, e in episodes], dtype=float)
+                for k in rng.choice(len(episodes), afib_windows_per_record, p=room / room.sum()):
+                    s, e = episodes[k]
+                    starts.append(rng.integers(s, e - WINDOW + 1))
 
-    if total_samples == 0:
-        return 0.0
+            self.windows += [(path, int(s), int(afib_fraction(s, s + WINDOW, intervals) >= 0.5)) for s in starts]
 
-    total_af_samples = 0
-    in_afib = False
-    afib_start_idx = 0
-
-    for i, symbol in enumerate(symbols):
-        note = aux_notes[i] if i < len(aux_notes) else ""
-
-        if "(AFIB" in note and not in_afib:
-            in_afib = True
-            afib_start_idx = sample_indices[i]
-
-        elif ("(N" in note or "(SVTA" in note or "(AFL" in note) and in_afib:
-            in_afib = False
-            total_af_samples += (sample_indices[i] - afib_start_idx)
-
-    if in_afib:
-        total_af_samples += (total_samples - afib_start_idx)
-
-    # Calculate AF Burden
-    af_burden = total_af_samples / total_samples
-
-    # Map to severity targets
-    if af_burden == 0.0:
-        return 0.0  
-    elif af_burden < 0.05:
-        return 1.0  
-    elif af_burden < 0.50:
-        return 2.0  
-    else:
-        return 3.0  
-
-
-class IcentiaECGDataset(Dataset):
-    """
-    Lazy-loading Dataset class to pipe 1D ECG voltage arrays into PyTorch.
-    Optimized for multi-process loaders and cached for high epoch iteration speed.
-    """
-    def __init__(self, record_paths, window_size=500.0):
-        # window_size 500.0 = exactly 2.0 seconds at 250.0 Hz
-        self.record_paths = record_paths
-        self.window_size = int(window_size)
-        self.label_cache = {}
+    @property
+    def labels(self):
+        return np.array([w[2] for w in self.windows])
 
     def __len__(self):
-        return len(self.record_paths)
+        return len(self.windows)
 
     def __getitem__(self, idx):
-        record_path = self.record_paths[idx]
-
-        # 1. Read ONLY the required slice from the hard drive
-        record = wfdb.rdrecord(record_path, sampfrom=0, sampto=self.window_size)
-
-        # 2. Extract 1D array and force float32
-        raw_signal = record.p_signal[:, 0].astype(np.float32)
-
-        # 3. Apply band-pass filter (0.5 Hz - 45 Hz)
-        filtered_signal = bandpass_filter(raw_signal, lowcut=0.5, highcut=45.0, fs=250.0)
-
-        # 4. Apply Min-Max normalization to range [0, 1]
-        normalized_signal = min_max_normalize(filtered_signal)
-
-        # 5. Shape for 1D CNN: (Channels, Sequence_Length) -> (1, 500)
-        tensor_x = torch.tensor(normalized_signal, dtype=torch.float32).unsqueeze(0)
-
-        # 6. Retrieve or calculate the severity label
-        if idx in self.label_cache:
-            severity_float = self.label_cache[idx]
-        else:
-            severity_float = calculate_severity_from_atr(record_path)
-            self.label_cache[idx] = severity_float
-
-        tensor_y = torch.tensor(severity_float, dtype=torch.long)
-
-        return tensor_x, tensor_y
+        path, start, label = self.windows[idx]
+        raw = wfdb.rdrecord(path, sampfrom=start, sampto=start + WINDOW).p_signal[:, 0]
+        x = torch.from_numpy(preprocess(raw)).unsqueeze(0)  # (1, 500)
+        return x, torch.tensor(label, dtype=torch.long)

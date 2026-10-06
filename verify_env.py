@@ -24,12 +24,12 @@ def check_local_imports():
     print(f"\n--- MODULE RESOLUTION ---")
     try:
         # Verify architecture instantiation
-        test_model = AFCNN_LSTM(num_classes=4)
+        test_model = AFCNN_LSTM()
         print("Model architecture (AFCNN_LSTM) resolved: Success")
 
         # Verify weights accessibility
         weights_path = "afib_cnn_lstm_v1.pt"
-        state_dict = torch.load(weights_path, map_location="cpu")
+        state_dict = torch.load(weights_path, map_location="cpu", weights_only=True)
         test_model.load_state_dict(state_dict)
         print(f"Weights ({weights_path}) loaded: Success")
     except Exception as e:

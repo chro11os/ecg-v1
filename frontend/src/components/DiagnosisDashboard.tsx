@@ -380,7 +380,6 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 							const signal = ${JSON.stringify(data.rawSignal)};
 							const rPeaks = ${JSON.stringify(data.rPeaks || [])};
 							const gradCam = ${JSON.stringify(data.gradCam || [])};
-							const burdenTier = ${data.burdenTier};
 
 							// Clear canvas
 							ctx.fillStyle = '#FFFFFF';
@@ -426,45 +425,6 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 									}
 								}
 
-								// Draw Attention Boundary dashed line at 500 samples (2.0s mark)
-								if (signal.length > 500) {
-									const boundaryX = getX(500);
-									ctx.strokeStyle = 'rgba(0, 102, 204, 0.4)';
-									ctx.lineWidth = 1.5;
-									ctx.setLineDash([4, 4]);
-									ctx.beginPath();
-									ctx.moveTo(boundaryX, 0);
-									ctx.lineTo(boundaryX, height);
-									ctx.stroke();
-
-									ctx.fillStyle = '#0066CC';
-									ctx.font = 'bold 9px monospace';
-									ctx.fillText('MODEL ATTENTION WINDOW (2.0s)', boundaryX - 170, 15);
-								}
-								ctx.restore();
-							}
-
-							// Draw traditional heuristic highlight for burdenTier 2 & 3
-							if (burdenTier === 2 || burdenTier === 3) {
-								ctx.save();
-								const startX = getX(750);
-								const endX = getX(1750);
-								ctx.fillStyle = 'rgba(220, 38, 38, 0.04)';
-								ctx.fillRect(startX, 0, endX - startX, height);
-
-								ctx.strokeStyle = 'rgba(220, 38, 38, 0.2)';
-								ctx.lineWidth = 1.2;
-								ctx.setLineDash([5, 4]);
-								ctx.beginPath();
-								ctx.moveTo(startX, 0);
-								ctx.lineTo(startX, height);
-								ctx.moveTo(endX, 0);
-								ctx.lineTo(endX, height);
-								ctx.stroke();
-
-								ctx.fillStyle = '#DC2626';
-								ctx.font = 'bold 9px monospace';
-								ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, 15);
 								ctx.restore();
 							}
 
@@ -719,7 +679,6 @@ const DiagnosisDashboard: React.FC<Props> = ({ data, onReset, patientScans, acti
 			<div className="bg-card-bg border border-border-subtle p-1 shadow-xs">
 				<WaveformChart 
 					signal={data.rawSignal} 
-					burdenTier={data.burdenTier} 
 					rPeaks={data.rPeaks} 
 					gradCam={data.gradCam} 
 				/>

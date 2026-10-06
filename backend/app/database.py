@@ -39,6 +39,7 @@ def init_db():
             signal_data TEXT, -- Stored as JSON string
             predicted_class INTEGER NOT NULL,
             confidence REAL NOT NULL,
+            afib_burden REAL, -- % of 2 s windows classified AFib
             rr_variance REAL DEFAULT 0.0,
             rmssd REAL DEFAULT 0.0,
             r_peaks TEXT,     -- Stored as JSON string
@@ -46,6 +47,10 @@ def init_db():
             FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
         )
     """)
+
+    # Migrate databases created before afib_burden existed
+    if "afib_burden" not in [row["name"] for row in cursor.execute("PRAGMA table_info(scans)")]:
+        cursor.execute("ALTER TABLE scans ADD COLUMN afib_burden REAL")
 
     # Create patient_pictures table
     cursor.execute("""

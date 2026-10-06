@@ -25,12 +25,11 @@ ChartJS.register(
 
 interface Props {
     signal: number[];
-    burdenTier: number;
     rPeaks?: number[];
     gradCam?: number[];
 }
 
-const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam }) => {
+const WaveformChart: React.FC<Props> = ({ signal, rPeaks, gradCam }) => {
     const chartRef = useRef<any>(null);
 
     const peaksData = new Array(signal.length).fill(null);
@@ -114,56 +113,6 @@ const WaveformChart: React.FC<Props> = ({ signal, burdenTier, rPeaks, gradCam })
                         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
                         ctx.fillRect(x1, top, x2 - x1, bottom - top);
                     }
-                }
-
-                // Draw attention boundary line (2.0s mark, index 500)
-                const boundaryIndex = 500;
-                if (chart.data.labels[boundaryIndex]) {
-                    const boundaryX = x.getPixelForValue(chart.data.labels[boundaryIndex]);
-                    ctx.strokeStyle = '#99C2EC'; // Solid equivalent of 40% blue on white
-                    ctx.lineWidth = 1.5;
-                    ctx.setLineDash([4, 4]);
-                    ctx.beginPath();
-                    ctx.moveTo(boundaryX, top);
-                    ctx.lineTo(boundaryX, bottom);
-                    ctx.stroke();
-
-                    // Text indicator for attention boundary
-                    ctx.fillStyle = '#0066CC';
-                    ctx.font = 'bold 9px monospace';
-                    ctx.fillText('MODEL ATTENTION WINDOW (2.0s)', boundaryX - 175, top + 15);
-                }
-            }
-
-            // 2. Draw traditional heuristic highlight for burden tiers 2 & 3
-            const showHeuristicHighlight = burdenTier === 2 || burdenTier === 3;
-            if (showHeuristicHighlight) {
-                const startIndex = 750; // 3 seconds
-                const endIndex = 1750;   // 7 seconds
-
-                if (chart.data.labels[startIndex] && chart.data.labels[endIndex]) {
-                    const startX = x.getPixelForValue(chart.data.labels[startIndex]);
-                    const endX = x.getPixelForValue(chart.data.labels[endIndex]);
-
-                    // Soft solid red overlay for heuristic region (equivalent to 4% red on white)
-                    ctx.fillStyle = '#FEF6F6';
-                    ctx.fillRect(startX, top, endX - startX, bottom - top);
-
-                    // structural dashed boundary lines (equivalent to 20% red on white)
-                    ctx.strokeStyle = '#F8D4D4';
-                    ctx.lineWidth = 1.2;
-                    ctx.setLineDash([5, 4]);
-                    ctx.beginPath();
-                    ctx.moveTo(startX, top);
-                    ctx.lineTo(startX, bottom);
-                    ctx.moveTo(endX, top);
-                    ctx.lineTo(endX, bottom);
-                    ctx.stroke();
-
-                    // Text indicator
-                    ctx.fillStyle = '#DC2626';
-                    ctx.font = 'bold 9px monospace';
-                    ctx.fillText('ERRATIC ARRHYTHMIC SEGMENT DETECTED (3.0s - 7.0s)', startX + 8, top + 15);
                 }
             }
 

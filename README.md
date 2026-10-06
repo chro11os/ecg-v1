@@ -1,130 +1,118 @@
 # GTT - AFib Detection & Assessment Tool
 
-This project classifies the severity of Atrial Fibrillation (AFib) in patients using 1D electrocardiogram (ECG) voltage signals. It includes a deep learning model, an SQLite database-backed web API backend, and an interactive frontend workstation with model explainability (Grad-CAM heatmaps), real-time ECG simulation, and clinical CDSS risk assessments.
+Detects Atrial Fibrillation (AFib) in single-lead ECG and measures **AFib burden**, the share of time a patient spends in AFib. A 1D CNN-LSTM classifies every 2-second window as AFib or non-AFib, and burden is measured by sliding it across the recording. A FastAPI + SQLite backend and a React workstation add Grad-CAM explanations, HRV metrics, an ECG simulator and CHA₂DS₂-VASc stroke-risk scoring.
+
+> Research prototype. Not a medical device and not validated for clinical use.
+
+## Paper
+
+**[Classification of Atrial Fibrillation Burden Tiers in ECG Signals Using Hybrid 1D CNN-LSTM Models](thesis.pdf)**
+Guzman, N. B., Tambagan, E. A. D., Tolentino, A. J. B. III. Thesis, School of Information Technology, Mapúa Institute of Technology, July 2026. Adviser: Joel C. De Goma.
+
+The paper's results come from the original pipeline, preserved at git tag [`thesis-v1`](../../tree/thesis-v1). The code on `main` has since been revised (see [What changed from v1](#what-changed-from-v1)), so it does not reproduce the paper's numbers.
 
 ---
 
-## Core Project Facts
+## How it works
 
-### 1. Goal & Burden Tiers
-The system classifies ECG recordings into one of four clinical **AFib Burden Tiers** based on the temporal ratio of active AFib segments in a 10s recording:
-* **Sinus Rhythm (Tier 0):** 0.0% AFib burden.
-* **Micro-Burden / Rare Paroxysm (Tier 1):** Less than 5.0% AFib burden.
-* **Intermediate Burden / Active Paroxysm (Tier 2):** Between 5.0% and 50.0% AFib burden.
-* **High Burden / Persistent AFib (Tier 3):** Greater than 50.0% AFib burden.
+### 1. Labels come from the window the model sees
+Icentia11k annotates rhythm episodes inside each ~70-minute segment (`(AFIB` … `)`). `ml_pipeline/dataset.py` parses those episodes. A 2-second window is labelled **AFib** when at least half of it lies inside an annotated AFib episode, so every label describes exactly the signal the model receives.
 
-### 2. Dataset
-* **Source:** PhysioNet Icentia11k ECG database (single-lead ECG recorded at 250 Hz).
-* **Local Size:** 21,033 patient files (including subsets `p00`, `p01`, and `p02`).
-* **Distribution:** 95.38% Normal, 0.01% Trace, 0.02% Mild, and 4.59% Severe.
+### 2. Burden is measured, then mapped to a tier
+At inference, the signal is cut into consecutive 2-second windows. Each window gets P(AFib), and burden is the share of windows with P ≥ 0.5. Burden then maps to a clinical tier (`model.burden_tier`):
 
-### 3. Signal Processing
-Before inference, raw ECG inputs go through the following steps:
-1. **Bandpass Filter:** A 4th-order Butterworth filter ($0.5\text{ Hz} - 45\text{ Hz}$) removes breathing movement drift and high-frequency noise.
-2. **Normalization:** Voltage amplitudes are scaled between `0.0` and `1.0`.
-3. **Segmentation:** Signals are sliced into 2-second windows (exactly 500 samples).
+| Tier | Burden |
+|---|---|
+| 0 · Sinus Rhythm | 0% |
+| 1 · Micro-Burden / Rare Paroxysm | < 5% |
+| 2 · Intermediate Burden / Active Paroxysm | 5% – 50% |
+| 3 · High Burden / Persistent AFib | ≥ 50% |
 
-### 4. Model Architecture (1D CNN-LSTM)
-* **Spatial Layer (CNN):** Extracts shape features (QRS complexes, wave slopes) using two 1D Conv layers (64 and 128 filters).
-* **Rhythm Layer (LSTM):** Tracks time interval fluctuations between beats using 64 hidden units.
-* **Regularization:** A 0.3 Dropout layer prevents overfitting.
-* **Classifier:** A final linear layer maps features to the 4 Burden Tiers.
-* **Explainability (Grad-CAM):** Computes gradients from the final Conv1d layer to identify which parts of the 2-second waveform triggered the model's decision, returning a 500-value heatmap.
+A 10-second upload is 5 windows, so its burden moves in 20% steps. Tier 1 is only reachable on longer recordings.
 
-### 5. Training & Evaluation
-* **Addressing Imbalance:** Because 95% of the data is normal, the model was trained on a balanced set of **4,000 files (1,000 per class)** using random oversampling and undersampling.
-* **Performance:** Evaluated on an unseen 15% testing split (3,159 records), the balanced model achieves **63.91% Accuracy** and correctly identifies **40.4% of all Severe AFib cases** (40.4% Recall).
+### 3. Preprocessing (`model.preprocess`, shared by training and the API)
+1. 4th-order Butterworth band-pass, 0.5–45 Hz (zero-phase `filtfilt`)
+2. Min-max scaling of each window to [0, 1]
 
----
+### 4. Model (`model.py`)
+Conv1d(64, k7) → Conv1d(128, k5), each with BatchNorm, ReLU and MaxPool → LSTM(64) → Dropout(0.3) → Linear(2). Grad-CAM on the last conv layer gives a per-sample heatmap for each window.
 
-## Interactive Workstation Features
-
-### 1. Bedside ECG Simulator
-* Generates real-time Lead I ECG waveforms using dynamic R-R intervals and flat T-waves tailored to reflect authentic clinical Sinus Rhythm or Atrial Fibrillation.
-* Includes heart monitor audio beep sound controls and flash indicators.
-
-### 2. Simulated Demographics & CHA₂DS₂-VASc Form
-* Enables testing stroke risk factors directly on the ECG Simulator using custom Age, Gender, and Comorbidities checklists (HF, Hypertension, Diabetes, Stroke, Vascular Disease).
-* Automatically upserts simulation configurations to the anonymous clinical database profile.
-
-### 3. Trust-Building Developer Log Console
-* Simulates sequential DSP filtering, LSTM model forward passes, and XAI Grad-CAM gradient mapping inside a staggered terminal logging interface to build diagnostic trust ("Labor Illusion").
-
-### 4. Split-Pane Registry Tabs
-* Separates Patients list records (supporting creations, edits, and deletions) from the global Scans history, dividing persistent clinical records from temporary session simulations.
+### 5. Training (`ml_pipeline/train.py`)
+- **Patient-wise 70/15/15 split.** Icentia segments from the same patient never cross splits.
+- **Train windows:** 10 random windows per segment, plus 10 drawn from inside AFib episodes to offset AFib's low prevalence. Class-weighted cross-entropy.
+- **Val/test windows:** 20 random windows per segment, natural prevalence.
+- Adam (lr 1e-3), 10 epochs. Keeps the checkpoint with the best validation ROC-AUC.
 
 ---
 
-## Installation & Setup
+## Results
 
-### Backend Dependencies (Python)
-Make sure you have python 3.10+ installed. Install the required libraries in your environment:
+_To be filled in after retraining on the full dataset:_ `python ml_pipeline/evaluate_test_split.py` reports
+- **window level:** ROC-AUC, sensitivity, specificity, precision, F1 on held-out test patients
+- **record level:** burden MAE and tier accuracy / confusion matrix, from sliding the model over every 2 s of each test record
+
+`python comparison_models/benchmark.py` compares the CNN-LSTM against a standalone CNN, standalone LSTM, CNN-GRU, CNN-BiLSTM and a small Transformer, all trained the same way on the same windows. It writes `benchmark_results.json` and `roc_curves.png`.
+
+### What changed from v1
+The thesis version (`thesis-v1`) reported a CNN-LSTM macro ROC-AUC of 0.6901 and recall of 42.55%; most baselines were near or below chance (Table 4.1). The paper attributes the missed tier-3 cases to "the clinical limitation of short 2.0-second snapshots" (§4). The underlying cause:
+
+- Each record was labelled with its burden tier, computed over the full ~70-minute segment, but the model saw only the **first 2 seconds**. In most records with AFib, those 2 seconds are normal rhythm. One example: `p00139_s08`'s first AFib episode starts 38 minutes in. Most labels therefore couldn't be predicted from the input.
+- Tiers 1 and 2 had only 3 and 4 records in total. Oversampling copied them hundreds of times, and the test set held 1 and 2 of them.
+- The split was by file, not by patient, so segments from one patient could land in both train and test.
+
+v2 labels each window from its own annotations, splits by patient, and measures burden instead of classifying it directly.
+
+### Known limitations
+- **Tier boundaries are sensitive to false positives.** Tier 0 requires zero AFib windows, so even a 1% window false-positive rate pushes most long sinus recordings into tier 1. Natural next steps: require a minimum episode length (AFib is clinically defined as lasting ≥ 30 s), or tune the window threshold on validation data.
+- A 2-second window holds only 2–3 beats, which limits how much R-R irregularity the model can see.
+- Atrial flutter and other rhythms count as non-AFib.
+
+---
+
+## Workstation features
+- **Upload or simulate** a 10 s Lead I strip (2,500 samples @ 250 Hz). The simulator generates sinus or AFib rhythms with heart-monitor audio.
+- **Diagnosis dashboard:** tier, measured burden, confidence, per-window AFib probabilities, a Grad-CAM heatmap over the full strip, R-peaks, R-R variance and RMSSD.
+- **CHA₂DS₂-VASc** stroke-risk score from patient demographics and comorbidities.
+- **Patient registry and scan history** (SQLite). A patient's *cumulative burden* is the share of their scans in which AFib was detected.
+
+### API
+`POST /predict` with `{"signal": [... 500 or 2500 floats ...], "patient_id": "optional"}` returns `severity_class` (tier), `afib_burden` (%), `window_afib_probs`, `confidence`, `grad_cam`, `r_peaks`, `rr_variance`, `rmssd`, `stroke_risk_score`, `cumulative_burden`, `scan_id`. It returns `503` until trained weights exist.
+
+---
+
+## Setup
+
+### Backend (Python 3.10+)
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt        # Linux + AMD ROCm
+pip install -r requirements-mac.txt    # macOS (MPS)
 ```
-*Key Packages:* `torch` (PyTorch), `fastapi` (API), `uvicorn` (Server), `scipy` (Filters/Peak detection), `wfdb` (PhysioNet file reader), `scikit-learn` (Metrics), `matplotlib` (Plotting).
 
-### Frontend Dependencies (Node.js)
-Navigate to the `frontend/` folder and install packages:
+### Frontend
 ```bash
-cd frontend
-npm install
+cd frontend && bun install   # or npm install
 ```
-*Key Packages:* `react`, `chart.js` & `react-chartjs-2` (Waveform plotting), `chartjs-plugin-zoom` (ECG panning/zooming), `react-dropzone` (File drag-and-drop).
 
----
-
-## How to Run the Project
-
-### The Single-Command Bootloader (Recommended)
-You can start both the backend FastAPI server and the Vite dev server concurrently using the clinical bootloader script in the root directory:
+### Run
 ```bash
 ./start.sh
 ```
-This script handles building, port check bindings, and outputs color-coded direct localhost links in your terminal.
-
-Alternatively, you can run them in separate terminals:
-
-#### Start the Backend Server:
-```bash
-uvicorn backend.server:app --port 8000 --host 0.0.0.0
-```
-This starts the FastAPI server. It will load the trained weights file (`afib_cnn_lstm_v1.pt`) and automatically run on your GPU if available, falling back to CPU if not.
-
-#### Start the Frontend App:
-In a new terminal window, navigate to the `frontend/` folder and start the dev server:
-```bash
-cd frontend
-npm run dev
-```
+This starts the backend on `:8000` and the Vite dev server, then prints both URLs. To run them separately: `uvicorn backend.server:app --port 8000` and `cd frontend && bun run dev`.
 
 ---
 
-## Model Pipeline & Benchmarks
+## Model pipeline
 
-If you need to rebuild the metadata cache or retrain the main thesis model:
+Dataset: [Icentia11k](https://physionet.org/content/icentia11k-continuous-ecg/1.0/) (single-lead, 250 Hz). Place records under `ml_pipeline/physionet_data_aws/p0*/pXXXXX/` (gitignored).
 
-### 1. Build the Metadata Cache (Multicore Scan)
-Build the index of patient files and labels. This script runs in parallel across all CPU cores:
 ```bash
-python ml_pipeline/build_metadata_cache.py
+python ml_pipeline/build_metadata_cache.py    # parse AFib episodes from every .atr (multicore)
+python ml_pipeline/train.py                   # train, saves afib_cnn_lstm_v1.pt at the repo root
+python ml_pipeline/evaluate_test_split.py     # window + record-level test metrics
+python ml_pipeline/export_real_samples.py     # 10 s demo strips from test patients -> test/real_{sinus,paroxysm,afib}.json
+
+python comparison_models/train_comparison.py  # baselines
+python comparison_models/benchmark.py         # comparison table + ROC curves
 ```
 
-### 2. Train Our Model
-Train the 1D CNN-LSTM architecture on the balanced 4,000-record dataset:
-```bash
-python ml_pipeline/train_balanced.py
-```
-This saves the weights to `afib_cnn_lstm_v1.pt` and synchronizes them to the root and backend folders.
-
-### 3. Run Comparative Benchmarks
-To train the comparative baseline architectures and run the master evaluation:
-```bash
-python comparison_models/prepare_splits.py
-python comparison_models/train_comparison.py
-python comparison_models/benchmark.py
-```
-* **Outputs:** 
-  * Prints the benchmarking comparison table in the console.
-  * Saves plotted ROC curves to `comparison_models/roc_curves.png`.
-  * Exports metrics and confusion matrices to `comparison_models/benchmark_results.json`.
+The backend loads `afib_cnn_lstm_v1.pt` from the repo root.

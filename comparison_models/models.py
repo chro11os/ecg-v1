@@ -3,7 +3,7 @@ import torch.nn as nn
 
 # 1. Standalone 1D CNN
 class Standalone1DCNN(nn.Module):
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=2):
         super(Standalone1DCNN, self).__init__()
         self.features = nn.Sequential(
             nn.Conv1d(1, 64, kernel_size=7, stride=2, padding=3),
@@ -32,7 +32,7 @@ class Standalone1DCNN(nn.Module):
 
 # 2. Standalone LSTM
 class StandaloneLSTM(nn.Module):
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=2):
         super(StandaloneLSTM, self).__init__()
         # input_size=1 (1D voltage series), hidden_size=64, num_layers=2
         self.lstm = nn.LSTM(input_size=1, hidden_size=64, num_layers=2, batch_first=True)
@@ -50,7 +50,7 @@ class StandaloneLSTM(nn.Module):
 
 # 3. 1D CNN-GRU
 class CNN_GRU(nn.Module):
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=2):
         super(CNN_GRU, self).__init__()
         self.cnn = nn.Sequential(
             nn.Conv1d(1, 64, kernel_size=7, stride=2, padding=3),
@@ -76,7 +76,7 @@ class CNN_GRU(nn.Module):
 
 # 4. Bidirectional LSTM (BiLSTM)
 class CNN_BiLSTM(nn.Module):
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=2):
         super(CNN_BiLSTM, self).__init__()
         self.cnn = nn.Sequential(
             nn.Conv1d(1, 64, kernel_size=7, stride=2, padding=3),
@@ -106,7 +106,7 @@ class CNN_BiLSTM(nn.Module):
 
 # 5. Lightweight Transformer
 class ECGTransformer(nn.Module):
-    def __init__(self, num_classes=4, d_model=64, nhead=4, num_layers=2):
+    def __init__(self, num_classes=2, d_model=64, nhead=4, num_layers=2):
         super(ECGTransformer, self).__init__()
         # Project signal to d_model space: reduce length from 500 to 250 for speed
         self.project = nn.Conv1d(1, d_model, kernel_size=7, stride=2, padding=3)

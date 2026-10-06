@@ -9,12 +9,6 @@ def apply_bandpass_filter(signal: np.ndarray, fs: float = 250.0) -> np.ndarray:
     b, a = sig.butter(4, [low, high], btype='band')
     return sig.filtfilt(b, a, signal)
 
-def apply_min_max_normalization(signal: np.ndarray) -> np.ndarray:
-    min_val = np.min(signal)
-    max_val = np.max(signal)
-    denom = max_val - min_val
-    return (signal - min_val) / denom if denom != 0 else np.zeros_like(signal)
-
 def extract_ecg_landmarks(raw_signal: np.ndarray, fs: float = 250.0) -> Tuple[List[int], float, float]:
     filtered_signal = apply_bandpass_filter(raw_signal, fs)
     max_val_filtered = np.max(filtered_signal)

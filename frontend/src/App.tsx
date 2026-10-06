@@ -102,10 +102,6 @@ export default function App() {
                     .filter((scan: any) => scan.patient_id !== "#0000-0")
                     .map((scan: any) => {
                         const tier = (scan.predicted_class ?? 0) as BurdenTier;
-                        let simulatedBurden = 0.0;
-                        if (tier === 1) simulatedBurden = 4.25;
-                        else if (tier === 2) simulatedBurden = 28.4;
-                        else if (tier === 3) simulatedBurden = 72.8;
 
                         // Safe date parsing to prevent Safari/V8 crash
                         let timeStr = "";
@@ -123,7 +119,7 @@ export default function App() {
                             timestamp: timeStr,
                             burdenTier: tier,
                             confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
-                            burden: tier === 0 ? 0.0 : simulatedBurden,
+                            burden: scan.afib_burden ?? 0.0,
                             hardware: "SQLite DB",
                             responseTime: 0,
                             rawSignal: typeof scan.signal_data === "string" ? JSON.parse(scan.signal_data) : (scan.signal_data ?? []),
@@ -278,15 +274,10 @@ export default function App() {
                 // Update active diagnosis view locally
                 setDiagnosis(prev => {
                     if (prev && prev.id === scanId) {
-                        let simulatedBurden = 0.0;
-                        if (newClass === 1) simulatedBurden = 4.25;
-                        else if (newClass === 2) simulatedBurden = 28.4;
-                        else if (newClass === 3) simulatedBurden = 72.8;
 
                         return {
                             ...prev,
-                            burdenTier: newClass as BurdenTier,
-                            burden: newClass === 0 ? 0.0 : simulatedBurden
+                            burdenTier: newClass as BurdenTier
                         };
                     }
                     return prev;
@@ -360,15 +351,10 @@ export default function App() {
             const endTime = performance.now();
 
             const burdenTier: BurdenTier = (result.severity_class ?? 0) as BurdenTier;
-            let simulatedBurden = 0.0;
-
-            if (burdenTier === 1) simulatedBurden = 4.25;
-            else if (burdenTier === 2) simulatedBurden = 28.4;
-            else if (burdenTier === 3) simulatedBurden = 72.8;
 
             const responseTime = Math.round(endTime - startTime);
             const confidence = Math.round((result.confidence ?? 0.0) * 100.0);
-            const burden = burdenTier === 0 ? 0.0 : simulatedBurden;
+            const burden = result.afib_burden ?? 0.0;
 
             const newDiagnosis: DiagnosisData = {
                 id: result.scan_id ? Number(result.scan_id) : undefined,
@@ -436,10 +422,6 @@ export default function App() {
 
     const loadPatientScan = (scan: any) => {
         const tier = (scan.predicted_class ?? 0) as BurdenTier;
-        let simulatedBurden = 0.0;
-        if (tier === 1) simulatedBurden = 4.25;
-        else if (tier === 2) simulatedBurden = 28.4;
-        else if (tier === 3) simulatedBurden = 72.8;
 
         const currentPatient = patients.find(p => p.id === scan.patient_id);
 
@@ -447,7 +429,7 @@ export default function App() {
             id: Number(scan.id),
             burdenTier: tier,
             confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
-            burden: tier === 0 ? 0.0 : simulatedBurden,
+            burden: scan.afib_burden ?? 0.0,
             hardware: "SQLite DB",
             responseTime: 0,
             rawSignal: typeof scan.signal_data === "string" ? JSON.parse(scan.signal_data) : (scan.signal_data ?? []),

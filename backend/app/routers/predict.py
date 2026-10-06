@@ -2,8 +2,8 @@ import json
 import numpy as np
 from fastapi import APIRouter, HTTPException
 from backend.app.models.schemas import ECGPayload
-from backend.app.services.dsp import apply_min_max_normalization, apply_bandpass_filter, extract_ecg_landmarks
-from backend.app.services.inference import run_model_inference, get_hardware_info
+from backend.app.services.dsp import extract_ecg_landmarks
+from backend.app.services import inference
 from backend.app.database import get_db_connection
 from backend.app.routers.patients import compute_cha2ds2_vasc
 
@@ -14,25 +14,19 @@ async def predict_ecg(payload: ECGPayload):
     n_samples = len(payload.signal)
     if n_samples not in (500, 2500):
         raise HTTPException(status_code=400, detail="Payload must be exactly 500 or 2500 samples")
+    if not inference.model_loaded:
+        raise HTTPException(status_code=503, detail="Model weights not found. Train with ml_pipeline/train.py first.")
 
     try:
-        # 1. Convert to numpy array
-        raw_signal = np.array(payload.signal, dtype=np.float32)
+        raw_signal = np.array(payload.signal, dtype=np.float64)
 
-        # 2. Slice to 500 samples (2.0 seconds @ 250Hz) for model inference
-        inference_signal = raw_signal[:500]
+        # 1. Model: AFib / non-AFib for every 2 s window, burden = share of AFib windows
+        severity_class, confidence, afib_burden, window_probs, grad_cam_values = inference.run_model_inference(raw_signal)
 
-        # 3 & 4. Filter and Normalize
-        filtered_inference = apply_bandpass_filter(inference_signal, fs=250.0)
-        normalized_inference = apply_min_max_normalization(filtered_inference)
-
-        # 5. Model Inference
-        severity_class, confidence, grad_cam_values = run_model_inference(normalized_inference)
-
-        # 6. Traditional DSP landmark peak detection and interval gating on the full uploaded signal
+        # 2. Traditional DSP landmark peak detection and interval gating on the full uploaded signal
         r_peaks_list, rr_variance, rmssd = extract_ecg_landmarks(raw_signal, fs=250.0)
 
-        hardware = get_hardware_info()
+        hardware = inference.get_hardware_info()
 
         # 7. Database storage and cumulative analytics
         stroke_risk_score = 0
@@ -66,13 +60,14 @@ async def predict_ecg(payload: ECGPayload):
                 
                 # Record the scan
                 cursor.execute("""
-                    INSERT INTO scans (patient_id, signal_data, predicted_class, confidence, rr_variance, rmssd, r_peaks, grad_cam)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO scans (patient_id, signal_data, predicted_class, confidence, afib_burden, rr_variance, rmssd, r_peaks, grad_cam)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     patient_id_to_use,
                     json.dumps(payload.signal),
                     severity_class,
                     confidence,
+                    afib_burden,
                     rr_variance,
                     rmssd,
                     json.dumps(r_peaks_list),
@@ -96,6 +91,8 @@ async def predict_ecg(payload: ECGPayload):
         return {
             "severity_class": severity_class,
             "confidence": round(confidence, 4),
+            "afib_burden": afib_burden,
+            "window_afib_probs": window_probs,
             "hardware_used": hardware,
             "r_peaks": r_peaks_list,
             "rr_variance": round(rr_variance, 2),
