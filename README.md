@@ -110,10 +110,12 @@ v2 labels each window from its own annotations, splits by patient, and measures 
 ---
 
 ## Workstation features
-- **Upload or simulate** a 10 s Lead I strip (2,500 samples @ 250 Hz). The simulator generates sinus or AFib rhythms with heart-monitor audio.
-- **Diagnosis dashboard:** tier, measured burden, confidence, per-window AFib probabilities, a Grad-CAM heatmap over the full strip, R-peaks, R-R variance and RMSSD.
-- **CHA₂DS₂-VASc** stroke-risk score from patient demographics and comorbidities.
-- **Patient registry and scan history** (SQLite). A patient's *cumulative burden* is the share of their scans in which AFib was detected.
+- **Upload, simulate or load a sample:** drop a 10-second strip (2,500 samples at 250 Hz), record a synthetic one with the simulator, or load one of three real strips from test patients with one click.
+- **ECG strip on calibrated paper:** 1 mm and 5 mm grid at 25 mm/s and 10 mm/mV, with a calibration pulse, the time between beats in ms above each beat, and 25 or 50 mm/s paper speed.
+- **Rhythm track:** under the strip, each 2-second window shows the model's AFib probability and whether it counted toward burden. A second track shows Grad-CAM, where the model looked.
+- **Result:** measured burden on a 0–100% scale marked with the tier boundaries, tier, model confidence, heart rate and R-R variability.
+- **CHA₂DS₂-VASc** stroke risk score, with a per-criterion breakdown for registered patients.
+- **Patient registry and scan history** (SQLite), with each patient's burden plotted across scans. A patient's *scans with AFib* figure is the share of their scans in which AFib was detected. Scans made before v2 have no measured burden and show only their tier.
 
 ### API
 `POST /predict` with `{"signal": [... 500 or 2500 floats ...], "patient_id": "optional"}` returns `severity_class` (tier), `afib_burden` (%), `window_afib_probs`, `confidence`, `grad_cam`, `r_peaks`, `rr_variance`, `rmssd`, `stroke_risk_score`, `cumulative_burden`, `scan_id`. It returns `503` until trained weights exist.

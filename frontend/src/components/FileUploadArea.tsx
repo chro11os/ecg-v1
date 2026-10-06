@@ -4,30 +4,26 @@ import { useDropzone, type FileRejection } from 'react-dropzone';
 interface Props {
     onDataLoaded: (data: number[], fileName: string) => void;
     onError: (msg: string) => void;
+    actionLabel?: string;
+    compact?: boolean;
 }
 
-const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
+const FileUploadArea = ({ onDataLoaded, onError, actionLabel = "Analyze strip", compact = false }: Props) => {
     const [preparedSignal, setPreparedSignal] = useState<number[] | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
 
-    const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
-        if (fileRejections.length > 0) {
-            onError("Invalid file type. Please upload a structured .json file.");
-            setPreparedSignal(null);
-            setFileName(null);
-            return;
-        }
+    const reject = useCallback((msg: string) => {
+        setPreparedSignal(null);
+        setFileName(null);
+        onError(msg);
+    }, [onError]);
 
+    const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+        if (fileRejections.length > 0) return reject("That file isn't JSON. Upload a .json file with a \"signal\" array.");
         const file = acceptedFiles[0];
-        if (!file) {
-            onError("No file detected. Please try dragging the file again.");
-            setPreparedSignal(null);
-            setFileName(null);
-            return;
-        }
+        if (!file) return reject("No file came through. Try dropping it again.");
 
         const reader = new FileReader();
-
         reader.onload = () => {
             try {
                 const json = JSON.parse(reader.result as string);
@@ -35,83 +31,64 @@ const FileUploadArea = ({ onDataLoaded, onError }: Props) => {
                     setPreparedSignal(json.signal);
                     setFileName(file.name);
                 } else {
-                    setPreparedSignal(null);
-                    setFileName(null);
-                    onError("Invalid data structure: File must contain exactly 2,500 ECG samples under the 'signal' key.");
+                    reject("The file needs a \"signal\" array of exactly 2,500 samples (10 seconds at 250 Hz).");
                 }
             } catch {
-                setPreparedSignal(null);
-                setFileName(null);
-                onError("Failed to parse JSON file. Ensure it is valid JSON formatting.");
+                reject("The file isn't valid JSON.");
             }
         };
-
-        try {
-            reader.readAsText(file);
-        } catch {
-            setPreparedSignal(null);
-            setFileName(null);
-            onError("Failed to read the contents of the file.");
-        }
-    }, [onError]);
+        reader.onerror = () => reject("The file couldn't be read.");
+        reader.readAsText(file);
+    }, [reject]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
-        accept: {
-            'application/json': ['.json'],
-            'text/plain': ['.json']
-        },
-        multiple: false
+        accept: { 'application/json': ['.json'], 'text/plain': ['.json'] },
+        multiple: false,
     });
 
-    const getBorderClass = () => {
-        if (preparedSignal) return 'border-status-healthy bg-status-healthy-light shadow-sm border-solid';
-        if (isDragActive) return 'border-brand-primary bg-brand-primary-light animate-pulse';
-        return 'border-border-subtle bg-card-bg shadow-xs hover:border-brand-primary-hover hover:bg-bg-canvas';
-    };
-
-    const getTextColorClass = () => {
-        if (preparedSignal) return 'text-status-healthy';
-        return 'text-brand-secondary';
-    };
-
     return (
-        <div className="space-y-4">
-            <div 
-                {...getRootProps()} 
-                className={`border-2 border-dashed p-10 rounded-none cursor-pointer transition-all duration-300 ${getBorderClass()}`}
+        <div className="space-y-3">
+            <div
+                {...getRootProps()}
+                className={`ecg-paper relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 transition-colors ${
+                    compact ? "min-h-28" : "min-h-56"
+                } ${isDragActive || preparedSignal ? "border-solid border-ink" : "border-dashed border-ink-faint hover:border-ink"}`}
             >
-                <input {...getInputProps()} />
-                <div className={`text-center font-mono text-sm transition-all duration-300 ${getTextColorClass()}`}>
+                <input {...getInputProps()} aria-label="ECG strip file" />
+                {!compact && (
+                    // Calibration pulse, as printed at the start of every ECG strip
+                    <svg className="absolute left-6 top-1/2 hidden -translate-y-1/2 sm:block" width="54" height="64" viewBox="0 0 54 64" aria-hidden>
+                        <path d="M0 62 H9 V2 H39 V62 H54" fill="none" stroke="var(--color-ink)" strokeWidth="1.5" />
+                    </svg>
+                )}
+                <div className="rounded-md bg-sheet/90 px-4 py-3 text-center">
                     {preparedSignal && fileName ? (
-                        <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
-                            <span className="text-status-healthy font-bold tracking-wider text-base">
-                                READY: {fileName}
-                            </span>
-                            <span className="text-xs text-brand-secondary font-mono tracking-normal">
-                                (2,500 samples parsed successfully)
-                            </span>
-                        </div>
+                        <>
+                            <p className="font-semibold">{fileName}</p>
+                            <p className="text-sm text-ink-soft">2,500 samples, ready</p>
+                        </>
+                    ) : isDragActive ? (
+                        <p className="font-semibold">Drop to load the strip</p>
                     ) : (
-                        isDragActive ? (
-                            <span className="text-brand-primary font-bold tracking-widest animate-bounce">
-                                DROP ECG DATA HERE
-                            </span>
-                        ) : (
-                            <span className="tracking-wide">
-                                DRAG & DROP 2,500 SAMPLES (.JSON)
-                            </span>
-                        )
+                        <>
+                            <p className="font-semibold">Drop an ECG strip here</p>
+                            <p className="text-sm text-ink-soft">
+                                or <span className="underline underline-offset-2">choose a file</span>
+                                {!compact && <>: JSON with 2,500 samples at 250 Hz under "signal"</>}
+                            </p>
+                        </>
                     )}
                 </div>
             </div>
 
             {preparedSignal && fileName && (
                 <button
+                    type="button"
                     onClick={() => onDataLoaded(preparedSignal, fileName)}
-                    className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-hover text-white font-mono font-bold rounded-none transition-all duration-300 tracking-wider animate-in fade-in slide-in-from-bottom-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
+                    className="w-full rounded-md bg-ink py-2.5 font-medium text-white hover:bg-ink/85"
                 >
-                    PROCESS ECG SIGNAL
+                    {actionLabel}
                 </button>
             )}
         </div>

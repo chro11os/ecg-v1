@@ -1,14 +1,24 @@
 import { useState, useEffect } from "react";
 import type { DiagnosisData, BurdenTier, Patient } from "./types";
+import { parseJson } from "./tiers";
 import DiagnosisDashboard from "./components/DiagnosisDashboard";
 import FileUploadArea from "./components/FileUploadArea";
 import Sidebar from "./components/Sidebar";
 import type { HistoryItem } from "./components/ScanHistory";
 import ECGSimulatorPanel from "./components/ECGSimulatorPanel";
 
+// Real 10 s strips from test-split patients (ml_pipeline/export_real_samples.py), loaded on demand
+const sampleFiles = import.meta.glob<{ signal: number[] }>("../../test/real_*.json", { import: "default" });
+const SAMPLES = [
+    ["sinus", "Normal rhythm"],
+    ["paroxysm", "AFib starting mid-strip"],
+    ["afib", "AFib throughout"],
+] as const;
+
 export default function App() {
     const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
     const [loading, setLoading] = useState(false);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [realHistory, setRealHistory] = useState<HistoryItem[]>([]);
     const [simulatedHistory, setSimulatedHistory] = useState<HistoryItem[]>([]);
     const [scanSource, setScanSource] = useState<"real" | "simulated">("real");
@@ -45,9 +55,7 @@ export default function App() {
     const [scanFilter, setScanFilter] = useState<string>("ALL");
     const [scanSort, setScanSort] = useState<string>("NEWEST");
 
-    // Workstation & Simulator Tabs
-    const [activeWorkstationTab, setActiveWorkstationTab] = useState<"UPLOAD" | "SIMULATE">("UPLOAD");
-    const [anonymousTab, setAnonymousTab] = useState<"INFO" | "SIMULATE">("INFO");
+    const [entryTab, setEntryTab] = useState<"UPLOAD" | "SIMULATE">("UPLOAD");
 
     const fetchNextId = async () => {
         try {
@@ -73,8 +81,8 @@ export default function App() {
         try {
             const res = await fetch("http://localhost:8000/patients");
             if (res.ok) {
-                const data = await res.json();
-                setPatients(data);
+                const data: Patient[] = await res.json();
+                setPatients(data.filter(p => p.id !== "#0000-0")); // internal profile for anonymous scans
             }
         } catch (err) {
             console.error("Error fetching patients:", err);
@@ -119,14 +127,15 @@ export default function App() {
                             timestamp: timeStr,
                             burdenTier: tier,
                             confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
-                            burden: scan.afib_burden ?? 0.0,
+                            burden: scan.afib_burden ?? null,
                             hardware: "SQLite DB",
                             responseTime: 0,
-                            rawSignal: typeof scan.signal_data === "string" ? JSON.parse(scan.signal_data) : (scan.signal_data ?? []),
-                            rPeaks: typeof scan.r_peaks === "string" ? JSON.parse(scan.r_peaks) : (scan.r_peaks ?? []),
+                            rawSignal: parseJson(scan.signal_data, []),
+                            rPeaks: parseJson(scan.r_peaks, []),
                             rrVariance: scan.rr_variance ?? 0.0,
                             rmssd: scan.rmssd ?? 0.0,
-                            gradCam: typeof scan.grad_cam === "string" ? JSON.parse(scan.grad_cam) : (scan.grad_cam ?? []),
+                            gradCam: parseJson(scan.grad_cam, []),
+                            windowProbs: parseJson(scan.window_probs, undefined),
                             strokeRiskScore: 0, 
                             cumulativeAFibBurden: 0.0,
                             patientId: scan.patient_id
@@ -309,6 +318,7 @@ export default function App() {
 
     const handleAnalysis = async (incomingSignal: number[], fileName: string, overridePatientId?: string, simDemographics?: any) => {
         setLoading(true);
+        setAnalysisError(null);
         const startTime = performance.now();
         try {
             const patientIdToUse = overridePatientId || selectedPatientId;
@@ -348,6 +358,7 @@ export default function App() {
             });
 
             const result = await response.json();
+            if (!response.ok) throw new Error(result.detail ?? `The server answered ${response.status}.`);
             const endTime = performance.now();
 
             const burdenTier: BurdenTier = (result.severity_class ?? 0) as BurdenTier;
@@ -368,6 +379,7 @@ export default function App() {
                 rrVariance: result.rr_variance ?? 0.0,
                 rmssd: result.rmssd ?? 0.0,
                 gradCam: result.grad_cam ?? [],
+                windowProbs: result.window_afib_probs,
                 strokeRiskScore: result.stroke_risk_score,
                 cumulativeAFibBurden: result.cumulative_burden,
                 patientId: patientIdToUse || undefined
@@ -396,6 +408,9 @@ export default function App() {
             }
         } catch (error) {
             console.error("Inference Error:", error);
+            setAnalysisError(error instanceof TypeError
+                ? "Couldn't reach the analysis server. Start it with ./start.sh, or uvicorn on port 8000."
+                : `The strip couldn't be analyzed: ${(error as Error).message}`);
         } finally {
             setLoading(false);
         }
@@ -414,6 +429,7 @@ export default function App() {
             rrVariance: item.rrVariance,
             rmssd: item.rmssd,
             gradCam: item.gradCam,
+            windowProbs: item.windowProbs,
             strokeRiskScore: item.strokeRiskScore,
             cumulativeAFibBurden: item.cumulativeAFibBurden,
             patientId: item.patientId
@@ -429,14 +445,15 @@ export default function App() {
             id: Number(scan.id),
             burdenTier: tier,
             confidence: Math.round((scan.confidence ?? 0.0) * 100.0),
-            burden: scan.afib_burden ?? 0.0,
+            burden: scan.afib_burden ?? null,
             hardware: "SQLite DB",
             responseTime: 0,
-            rawSignal: typeof scan.signal_data === "string" ? JSON.parse(scan.signal_data) : (scan.signal_data ?? []),
-            rPeaks: typeof scan.r_peaks === "string" ? JSON.parse(scan.r_peaks) : (scan.r_peaks ?? []), 
+            rawSignal: parseJson(scan.signal_data, []),
+            rPeaks: parseJson(scan.r_peaks, []),
             rrVariance: scan.rr_variance ?? 0.0,
             rmssd: scan.rmssd ?? 0.0,
-            gradCam: typeof scan.grad_cam === "string" ? JSON.parse(scan.grad_cam) : (scan.grad_cam ?? []),
+            gradCam: parseJson(scan.grad_cam, []),
+            windowProbs: parseJson(scan.window_probs, undefined),
             strokeRiskScore: currentPatient?.stroke_risk_score,
             cumulativeAFibBurden: currentPatient?.cumulative_burden,
             patientId: scan.patient_id
@@ -444,7 +461,7 @@ export default function App() {
     };
 
     return (
-        <div className="min-h-screen flex text-text-primary bg-bg-canvas overflow-x-hidden">
+        <div className="flex min-h-screen flex-col overflow-x-hidden lg:flex-row">
             <Sidebar
                 setDiagnosis={setDiagnosis}
                 sidebarTab={sidebarTab}
@@ -486,165 +503,107 @@ export default function App() {
                 loadHistoryItem={loadHistoryItem}
             />
 
-            {/* Main Content Pane */}
-            <div className="flex-1 flex flex-col p-6 min-w-0 overflow-y-auto">
-                {!diagnosis ? (
-                    selectedPatientId ? (
-                        <div className="w-full flex-1 flex flex-col animate-in fade-in duration-300">
-                            <div className="flex-1 border border-border-subtle p-8 bg-card-bg shadow-sm flex flex-col justify-center items-center space-y-6">
-                                <div className="text-center space-y-2">
-                                    <p className="text-xs font-mono text-brand-secondary uppercase tracking-widest">Active Patient Target</p>
-                                    <h2 className="text-3xl font-bold tracking-wide text-brand-primary">
-                                        {patients.find(p => p.id === selectedPatientId)?.name} ({selectedPatientId})
-                                    </h2>
-                                    <p className="text-sm text-brand-secondary font-mono">
-                                        Upload or simulate a new ECG signal to append to this patient's historical registry.
-                                    </p>
-                                </div>
-
-                                <div className="flex border border-border-subtle p-0.5 bg-bg-canvas w-full max-w-md">
-                                    <button
-                                        onClick={() => setActiveWorkstationTab("UPLOAD")}
-                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
-                                            activeWorkstationTab === "UPLOAD"
-                                                ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
-                                        }`}
-                                    >
-                                        UPLOAD FILE
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveWorkstationTab("SIMULATE")}
-                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
-                                            activeWorkstationTab === "SIMULATE"
-                                                ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
-                                        }`}
-                                    >
-                                        RUN SIMULATION
-                                    </button>
-                                </div>
-                                
-                                <div className="w-full max-w-2xl border border-border-subtle p-6 bg-bg-canvas-card">
-                                    {activeWorkstationTab === "UPLOAD" ? (
-                                        <FileUploadArea
-                                            onDataLoaded={(signal, name) => handleAnalysis(signal, name, selectedPatientId)}
-                                            onError={(msg) => alert(msg)}
-                                        />
-                                    ) : (
-                                        <ECGSimulatorPanel
-                                            onAnalyze={(signal, name, simDemographics) => handleAnalysis(signal, name, selectedPatientId, simDemographics)}
-                                            patientName={patients.find(p => p.id === selectedPatientId)?.name}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                            {loading && (
-                                <p className="text-brand-primary mt-6 text-center animate-pulse font-mono tracking-widest text-sm shrink-0">
-                                    ANALYZING SIGNAL...
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="w-full flex-1 flex flex-col animate-in fade-in duration-300">
-                            <div className="flex-1 border border-border-subtle p-8 bg-card-bg shadow-sm flex flex-col justify-center items-center space-y-6">
-                                <img 
-                                    src="https://upload.wikimedia.org/wikipedia/en/f/f8/Mapua_Uni_logo.svg" 
-                                    alt="Mapúa University Logo" 
-                                    className="w-20 h-20 object-contain mx-auto select-none pointer-events-none"
-                                />
-                                <div className="text-center space-y-2">
-                                    <h2 className="text-3xl font-bold tracking-wide uppercase">GTT - AFib Detection & Assessment Tool</h2>
-                                    <p className="text-sm text-brand-secondary font-mono">
-                                        Atrial Fibrillation Temporal Burden & Stroke Risk Calculator.
-                                    </p>
-                                </div>
-
-                                <div className="flex border border-border-subtle p-0.5 bg-bg-canvas w-full max-w-md">
-                                    <button
-                                        onClick={() => setAnonymousTab("INFO")}
-                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
-                                            anonymousTab === "INFO"
-                                                ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
-                                        }`}
-                                    >
-                                        INSTRUCTIONS
-                                    </button>
-                                    <button
-                                        onClick={() => setAnonymousTab("SIMULATE")}
-                                        className={`flex-1 py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
-                                            anonymousTab === "SIMULATE"
-                                                ? "bg-card-bg text-brand-primary shadow-xs"
-                                                : "text-brand-secondary hover:text-text-primary"
-                                        }`}
-                                    >
-                                        SIMULATE ECG (ANONYMOUS)
-                                    </button>
-                                </div>
-
-                                {anonymousTab === "INFO" ? (
-                                    <div className="border-t border-border-subtle pt-6 w-full max-w-lg text-center text-xs font-mono text-brand-secondary space-y-3">
-                                        <p className="font-bold text-text-primary uppercase tracking-wider mb-2">Instructions to begin analysis:</p>
-                                        <p>1. Register a new patient profile using the sidebar form.</p>
-                                        <p>2. Upload their raw ECG signal file to initialize analysis.</p>
-                                        <p>3. Select any registered patient to view their historical longitudinal trend.</p>
-                                    </div>
-                                ) : (
-                                    <div className="w-full max-w-2xl border border-border-subtle p-6 bg-bg-canvas-card">
-                                        <ECGSimulatorPanel
-                                            onAnalyze={(signal, name) => handleAnalysis(signal, name)}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                            {loading && (
-                                <p className="text-brand-primary mt-6 text-center animate-pulse font-mono tracking-widest text-sm shrink-0">
-                                    ANALYZING SIGNAL...
-                                </p>
-                            )}
-                        </div>
-                    )
-                ) : (
-                    <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="bg-card-bg border border-border-subtle p-4 flex justify-between items-center gap-4 flex-wrap shadow-xs">
-                            {selectedPatientId ? (
-                                <>
-                                    <div>
-                                        <p className="text-xs font-mono text-brand-secondary uppercase">Active Patient Target</p>
-                                        <p className="text-lg font-bold text-brand-primary">
-                                            {patients.find(p => p.id === selectedPatientId)?.name} ({selectedPatientId})
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setSelectedPatientId(null)}
-                                        className="px-4 py-2 bg-bg-canvas hover:bg-border-subtle border border-border-subtle text-xs font-mono font-bold cursor-pointer rounded-none"
-                                    >
-                                        DESELECT
-                                    </button>
-                                </>
-                            ) : (
-                                <div>
-                                    <p className="text-xs font-mono text-brand-secondary uppercase">Active Patient Target</p>
-                                    <p className="text-sm font-bold text-zinc-500 italic font-mono">
-                                        No patient target selected (Anonymous Scan Mode)
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                        
+            <main className="min-w-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
+                <div className="mx-auto max-w-6xl">
+                    {diagnosis ? (
                         <DiagnosisDashboard
                             data={diagnosis}
                             patientScans={selectedPatientId ? selectedPatientScans : undefined}
                             activePatient={selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined}
-                            onReset={() => {
-                                setDiagnosis(null);
-                            }}
+                            onReset={() => setDiagnosis(null)}
                             onUpdateScan={updateScan}
                         />
+                    ) : (
+                        <StartScreen
+                            patient={patients.find(p => p.id === selectedPatientId)}
+                            entryTab={entryTab}
+                            setEntryTab={setEntryTab}
+                            loading={loading}
+                            error={analysisError}
+                            onAnalyze={(signal, name, demographics) => handleAnalysis(signal, name, selectedPatientId ?? undefined, demographics)}
+                        />
+                    )}
+                </div>
+            </main>
+        </div>
+    );
+}
+interface StartScreenProps {
+    patient?: Patient;
+    entryTab: "UPLOAD" | "SIMULATE";
+    setEntryTab: (tab: "UPLOAD" | "SIMULATE") => void;
+    loading: boolean;
+    error: string | null;
+    onAnalyze: (signal: number[], fileName: string, demographics?: any) => void;
+}
+
+function StartScreen({ patient, entryTab, setEntryTab, loading, error, onAnalyze }: StartScreenProps) {
+    const loadSample = async (key: string) => {
+        const load = sampleFiles[`../../test/real_${key}.json`];
+        if (load) onAnalyze((await load()).signal, `real_${key}.json`);
+    };
+
+    return (
+        <section className="space-y-6">
+            <header className="max-w-2xl">
+                <h1 className="figure text-4xl sm:text-5xl">{patient ? patient.name : "Measure AFib burden from a 10-second ECG"}</h1>
+                <p className="mt-3 text-lg text-ink-soft">
+                    {patient
+                        ? `New recording for ${patient.id}. The scan is saved to their record.`
+                        : "The model checks every 2 seconds of the strip for atrial fibrillation and reports how much of it is in AFib."}
+                </p>
+            </header>
+
+            <div className="relative rounded-xl border border-line bg-sheet p-6">
+                <div className="mb-5 flex gap-5 border-b border-line" role="tablist">
+                    {([["UPLOAD", "Upload a strip"], ["SIMULATE", "Simulate one"]] as const).map(([value, label]) => (
+                        <button
+                            key={value}
+                            role="tab"
+                            aria-selected={entryTab === value}
+                            onClick={() => setEntryTab(value)}
+                            className={`-mb-px border-b-2 bg-transparent pb-2.5 font-medium transition-colors ${
+                                entryTab === value ? "border-ink text-ink" : "border-transparent text-ink-soft hover:text-ink"
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
+                {entryTab === "UPLOAD" ? (
+                    <div className="space-y-5">
+                        <FileUploadArea onDataLoaded={(signal, name) => onAnalyze(signal, name)} onError={msg => alert(msg)} />
+                        {Object.keys(sampleFiles).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="mr-1 text-sm text-ink-soft">Or try a real strip from a patient the model never trained on:</span>
+                                {SAMPLES.map(([key, label]) => (
+                                    <button key={key} onClick={() => loadSample(key)} disabled={loading}
+                                        className="rounded-full border border-line px-3 py-1 text-sm hover:border-ink disabled:opacity-50">
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <ECGSimulatorPanel onAnalyze={onAnalyze} patientName={patient?.name} />
+                )}
+
+                {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-sheet/85" role="status">
+                        <p className="text-lg font-medium">Analyzing the strip…</p>
                     </div>
                 )}
             </div>
-        </div>
+
+            {error && <p className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">{error}</p>}
+
+            {!patient && (
+                <p className="max-w-2xl text-sm text-ink-soft">
+                    To follow someone over time, register them in the sidebar. Their scans then build a burden trend and a stroke risk score.
+                </p>
+            )}
+        </section>
     );
 }

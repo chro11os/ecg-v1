@@ -60,14 +60,15 @@ async def predict_ecg(payload: ECGPayload):
                 
                 # Record the scan
                 cursor.execute("""
-                    INSERT INTO scans (patient_id, signal_data, predicted_class, confidence, afib_burden, rr_variance, rmssd, r_peaks, grad_cam)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO scans (patient_id, signal_data, predicted_class, confidence, afib_burden, window_probs, rr_variance, rmssd, r_peaks, grad_cam)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     patient_id_to_use,
                     json.dumps(payload.signal),
                     severity_class,
                     confidence,
                     afib_burden,
+                    json.dumps(window_probs),
                     rr_variance,
                     rmssd,
                     json.dumps(r_peaks_list),

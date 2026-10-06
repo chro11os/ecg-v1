@@ -9,4 +9,6 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
   ],
+  // The start screen loads real sample strips from ../test
+  server: { fs: { allow: [".."] } },
 });

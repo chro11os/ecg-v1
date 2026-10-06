@@ -1,51 +1,83 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap');
 @import "tailwindcss";
 
 @theme {
-    --color-bg-canvas: #F8F9FA;
-    --color-text-primary: #121417;
-    --color-card-bg: #FFFFFF;
-    --color-border-subtle: #E5E7EB;
+    --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
 
-    --color-brand-primary: #0066CC;
-    --color-brand-secondary: #4A5568;
+    /* Ink: trace, text, primary actions */
+    --color-ink: #1E1B2E;
+    --color-ink-soft: #5B5870;
+    --color-ink-faint: #8E8BA0;
 
-    --color-status-critical: #DC2626;
-    --color-status-warning: #D97706;
-    --color-status-healthy: #16A34A;
-    --color-status-info: #2563EB;
+    /* Surfaces */
+    --color-page: #F4F3F7;
+    --color-sheet: #FFFFFF;
+    --color-line: #E4E2EA;
+    --color-hover: #EEEDF3;
 
-    /* Solid replacements for transparent colors to avoid opacity values */
-    --color-brand-primary-light: #E6F0FA;
-    --color-brand-primary-light-hover: #D9E8F5;
-    --color-brand-primary-light-border: #CCDFF2;
-    --color-brand-primary-hover: #005BB8;
+    /* ECG paper: only on strips, never the page */
+    --color-paper: #FFF5F4;
+    --color-grid-minor: #F4CDC8;
+    --color-grid-major: #E59A91;
 
-    --color-status-healthy-light: #E7F6EC;
-    --color-status-healthy-light-border: #D0EED9;
-    --color-status-healthy-hover: #149242;
+    /* AFib: one sequential crimson scale, because burden is an amount of AFib */
+    --color-afib: #B3164B;
+    --color-tier-0: #8E8BA0;
+    --color-tier-1: #D98AA5;
+    --color-tier-2: #C2306A;
+    --color-tier-3: #8C0F3A;
+    --color-afib-wash: #FBEAF0;
 
-    --color-status-info-light: #E9EFFF;
-    --color-status-info-light-border: #D3E0FF;
+    /* Only for destructive actions */
+    --color-danger: #A3261E;
+}
 
-    --color-status-warning-light: #FDF1E6;
-    --color-status-warning-light-border: #FCE2CD;
-
-    --color-status-critical-light: #FDF2F2;
-    --color-status-critical-light-border: #FBE2E2;
-    --color-status-critical-hover: #C52222;
-
-    --color-text-secondary-muted: #7F8C9F;
-    --color-text-secondary-dimmed: #A1ADBC;
-    --color-text-secondary-subtle: #E2E8F0;
-
-    --color-bg-canvas-card: #F3F4F6;
-    --color-bg-canvas-card-light: #F9FAFB;
+html {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    background-color: var(--color-page);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
 }
 
 body {
-    font-family: "Barlow Condensed";
-    background-color: var(--color-bg-canvas);
-    color: var(--color-text-primary);
-    transition: background-color 300ms, color 300ms;
+    background-color: var(--color-page);
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+}
+
+/* ECG paper: 1 mm minor squares, 5 mm major squares */
+.ecg-paper {
+    --box: 6px;
+    background-color: var(--color-paper);
+    background-image:
+        linear-gradient(var(--color-grid-major) 1px, transparent 1px),
+        linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px),
+        linear-gradient(var(--color-grid-minor) 1px, transparent 1px),
+        linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px);
+    background-size:
+        calc(var(--box) * 5) calc(var(--box) * 5),
+        calc(var(--box) * 5) calc(var(--box) * 5),
+        var(--box) var(--box),
+        var(--box) var(--box);
+}
+
+/* Expanded display figures, like the numerals on an ECG printout header */
+.figure {
+    font-stretch: 118%;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

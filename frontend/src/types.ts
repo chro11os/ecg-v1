@@ -20,7 +20,7 @@ export interface DiagnosisData {
     id?: number;
     burdenTier: BurdenTier;
     confidence: number;
-    burden: number; // calculated AF burden percentage
+    burden: number | null; // % of 2 s windows in AFib; null for scans made before burden was measured
     hardware: string;
     responseTime: number;
     rawSignal: number[];
@@ -28,6 +28,7 @@ export interface DiagnosisData {
     rrVariance?: number;
     rmssd?: number;
     gradCam?: number[];
+    windowProbs?: number[];         // P(AFib) per 2 s window
     strokeRiskScore?: number;       // CHA2DS2-VASc score
     cumulativeAFibBurden?: number;  // Aggregated percentage
     patientId?: string;

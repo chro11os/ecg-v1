@@ -45,188 +45,127 @@ interface SidebarProps {
     loadHistoryItem: (item: HistoryItem) => void;
 }
 
-export default function Sidebar({
-    setDiagnosis,
-    sidebarTab,
-    setSidebarTab,
-    isRegistering,
-    setIsRegistering,
-    editingPatientId,
-    setEditingPatientId,
-    newPatient,
-    setNewPatient,
-    registerPatient,
-    previewId,
-    tempSignal,
-    tempFileName,
-    setTempSignal,
-    setTempFileName,
-    patientSearch,
-    setPatientSearch,
-    patientSort,
-    setPatientSort,
-    patientScanSort,
-    setPatientScanSort,
-    patients,
-    selectedPatientId,
-    setSelectedPatientId,
-    selectedPatientScans,
-    startEditingPatient,
-    deletePatient,
-    deleteScan,
-    loadPatientScan,
-    realHistory,
-    simulatedHistory,
-    scanSource,
-    setScanSource,
-    scanFilter,
-    setScanFilter,
-    scanSort,
-    setScanSort,
-    loadHistoryItem,
-}: SidebarProps) {
+const EMPTY_PATIENT = {
+    id: "", name: "", age: 65, gender: "male",
+    hypertension: false, diabetes: false, stroke_history: false, vascular_disease: false, heart_failure: false,
+};
+
+export default function Sidebar(props: SidebarProps) {
+    const {
+        setDiagnosis, sidebarTab, setSidebarTab, isRegistering, setIsRegistering, editingPatientId, setEditingPatientId,
+        setNewPatient, patients, selectedPatientId, setSelectedPatientId, realHistory, simulatedHistory, scanSource, setScanSource,
+    } = props;
+
+    const tab = (value: "PATIENTS" | "SCANS", label: string) => (
+        <button
+            role="tab"
+            aria-selected={sidebarTab === value}
+            onClick={() => setSidebarTab(value)}
+            className={`flex-1 border-b-2 bg-transparent pb-2 text-sm font-medium transition-colors ${
+                sidebarTab === value ? "border-ink text-ink" : "border-transparent text-ink-soft hover:text-ink"
+            }`}
+        >
+            {label}
+        </button>
+    );
+
     return (
-        <div className="w-80 shrink-0 bg-card-bg border-r border-border-subtle p-6 flex flex-col h-screen sticky top-0 overflow-y-auto z-10 shadow-md">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border-subtle gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                    <img 
-                        src="https://upload.wikimedia.org/wikipedia/en/f/f8/Mapua_Uni_logo.svg" 
-                        alt="Mapúa University Logo" 
-                        className="h-6 w-auto shrink-0" 
-                    />
-                    <h2 className="text-[10.5px] font-bold font-mono tracking-wider text-text-primary leading-tight uppercase truncate">
-                        GTT - AFib Detection
-                    </h2>
-                </div>
-                <button 
-                    onClick={() => setDiagnosis(null)}
-                    className="text-[10px] font-mono font-bold px-2 py-1 bg-brand-primary-light hover:bg-brand-primary-light-border text-brand-primary border border-brand-primary-light-border rounded-none cursor-pointer active:scale-95 shrink-0"
-                >
-                    HELP
-                </button>
+        <aside className="flex w-full shrink-0 flex-col border-b border-line bg-sheet lg:sticky lg:top-0 lg:h-screen lg:w-80 lg:border-b-0 lg:border-r">
+            <button
+                onClick={() => { setDiagnosis(null); setSelectedPatientId(null); }}
+                className="flex items-center gap-3 px-5 pb-4 pt-5 text-left"
+                title="Back to start"
+            >
+                <img src="https://upload.wikimedia.org/wikipedia/en/f/f8/Mapua_Uni_logo.svg" alt="Mapúa University" className="h-8 w-auto" />
+                <span>
+                    <span className="block text-lg font-bold leading-none" style={{ fontStretch: "120%" }}>GTT</span>
+                    <span className="block text-xs text-ink-soft">AFib burden assessment</span>
+                </span>
+            </button>
+
+            <div className="flex gap-4 px-5" role="tablist">
+                {tab("PATIENTS", `Patients (${patients.length})`)}
+                {tab("SCANS", "Scans")}
             </div>
 
-            {/* Multi-Panel Tabs */}
-            <div className="flex border-b border-border-subtle mb-4">
-                <button
-                    onClick={() => setSidebarTab("PATIENTS")}
-                    className={`flex-1 py-2 text-xs font-mono font-bold border-b-2 cursor-pointer transition-all active:scale-[0.97] ${
-                        sidebarTab === "PATIENTS"
-                            ? "border-brand-primary text-brand-primary font-black"
-                            : "border-transparent text-brand-secondary hover:text-text-primary"
-                    }`}
-                >
-                    PATIENTS
-                </button>
-                <div className={`flex-1 border-b-2 flex items-center justify-between transition-all ${
-                    sidebarTab === "SCANS" ? "border-brand-primary" : "border-transparent"
-                }`}>
-                    <button
-                        onClick={() => setSidebarTab("SCANS")}
-                        className={`flex-1 text-center py-2 text-xs font-mono font-bold cursor-pointer transition-all active:scale-[0.97] ${
-                            sidebarTab === "SCANS"
-                                ? "text-brand-primary font-black"
-                                : "text-brand-secondary hover:text-text-primary"
-                        }`}
-                    >
-                        {scanSource === "real" ? `SCANS (${realHistory.length})` : `SIMS (${simulatedHistory.length})`}
-                    </button>
-                    <div className="relative flex items-center pr-2.5 h-full cursor-pointer hover:text-brand-primary transition-all">
-                        <select
-                            value={scanSource}
-                            onChange={(e) => {
-                                setScanSource(e.target.value as "real" | "simulated");
-                                setSidebarTab("SCANS");
-                            }}
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        >
-                            <option value="real">SCANS (REAL)</option>
-                            <option value="simulated">SIMULATIONS (SESSION)</option>
-                        </select>
-                        <svg className={`w-3 h-3 pointer-events-none transition-all ${
-                            sidebarTab === "SCANS" ? "text-brand-primary" : "text-brand-secondary"
-                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex-1 space-y-3 pr-1">
+            <div className="max-h-[60vh] flex-1 overflow-y-auto border-t border-line px-5 py-4 lg:max-h-none">
                 {sidebarTab === "PATIENTS" ? (
-                    <div className="space-y-3">
-                        {/* New Patient Registration Trigger */}
+                    <div className="space-y-4">
                         <button
                             onClick={() => {
                                 if (isRegistering) {
                                     setIsRegistering(false);
                                     setEditingPatientId(null);
-                                    setNewPatient({
-                                        id: "",
-                                        name: "",
-                                        age: 65,
-                                        gender: "male",
-                                        hypertension: false,
-                                        diabetes: false,
-                                        stroke_history: false,
-                                        vascular_disease: false,
-                                        heart_failure: false,
-                                    });
+                                    setNewPatient(EMPTY_PATIENT);
                                 } else {
                                     setIsRegistering(true);
                                 }
                             }}
-                            className="w-full py-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary-light-hover border border-brand-primary-light-border text-[11px] font-mono font-bold transition-all cursor-pointer rounded-none active:scale-[0.98]"
+                            className="w-full rounded-md border border-ink py-2 text-sm font-medium hover:bg-hover"
                         >
-                            {isRegistering 
-                                ? (editingPatientId ? "✕ CANCEL EDIT" : "✕ CANCEL REGISTRATION") 
-                                : "＋ REGISTER NEW PATIENT"
-                            }
+                            {isRegistering ? (editingPatientId ? "Cancel editing" : "Cancel registration") : "Register a patient"}
                         </button>
 
                         {isRegistering ? (
                             <PatientForm
                                 editingPatientId={editingPatientId}
-                                previewId={previewId}
-                                newPatient={newPatient}
+                                previewId={props.previewId}
+                                newPatient={props.newPatient}
                                 setNewPatient={setNewPatient}
-                                tempSignal={tempSignal}
-                                tempFileName={tempFileName}
-                                setTempSignal={setTempSignal}
-                                setTempFileName={setTempFileName}
-                                onSubmit={registerPatient}
+                                tempSignal={props.tempSignal}
+                                tempFileName={props.tempFileName}
+                                setTempSignal={props.setTempSignal}
+                                setTempFileName={props.setTempFileName}
+                                onSubmit={props.registerPatient}
                             />
                         ) : (
                             <PatientList
                                 patients={patients}
                                 selectedPatientId={selectedPatientId}
                                 setSelectedPatientId={setSelectedPatientId}
-                                selectedPatientScans={selectedPatientScans}
-                                patientSearch={patientSearch}
-                                setPatientSearch={setPatientSearch}
-                                patientSort={patientSort}
-                                setPatientSort={setPatientSort}
-                                patientScanSort={patientScanSort}
-                                setPatientScanSort={setPatientScanSort}
-                                startEditingPatient={startEditingPatient}
-                                deletePatient={deletePatient}
-                                deleteScan={deleteScan}
-                                loadPatientScan={loadPatientScan}
+                                selectedPatientScans={props.selectedPatientScans}
+                                patientSearch={props.patientSearch}
+                                setPatientSearch={props.setPatientSearch}
+                                patientSort={props.patientSort}
+                                setPatientSort={props.setPatientSort}
+                                patientScanSort={props.patientScanSort}
+                                setPatientScanSort={props.setPatientScanSort}
+                                startEditingPatient={props.startEditingPatient}
+                                deletePatient={props.deletePatient}
+                                deleteScan={props.deleteScan}
+                                loadPatientScan={props.loadPatientScan}
                                 setDiagnosis={setDiagnosis}
                             />
                         )}
                     </div>
                 ) : (
-                    <ScanHistory
-                        history={scanSource === "real" ? realHistory : simulatedHistory}
-                        scanFilter={scanFilter}
-                        setScanFilter={setScanFilter}
-                        scanSort={scanSort}
-                        setScanSort={setScanSort}
-                        loadHistoryItem={loadHistoryItem}
-                    />
+                    <div className="space-y-4">
+                        <div className="flex rounded-md border border-line p-0.5" role="group" aria-label="Which scans">
+                            {([["real", `Saved (${realHistory.length})`], ["simulated", `Simulated (${simulatedHistory.length})`]] as const).map(([value, label]) => (
+                                <button
+                                    key={value}
+                                    onClick={() => setScanSource(value)}
+                                    aria-pressed={scanSource === value}
+                                    className={`flex-1 rounded px-2 py-1.5 text-sm font-medium transition-colors ${
+                                        scanSource === value ? "bg-ink text-white" : "text-ink-soft hover:bg-hover"
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <ScanHistory
+                            history={scanSource === "real" ? realHistory : simulatedHistory}
+                            emptyText={scanSource === "real" ? "No saved scans yet." : "Simulated scans from this session appear here."}
+                            scanFilter={props.scanFilter}
+                            setScanFilter={props.setScanFilter}
+                            scanSort={props.scanSort}
+                            setScanSort={props.setScanSort}
+                            loadHistoryItem={props.loadHistoryItem}
+                        />
+                    </div>
                 )}
             </div>
-        </div>
+        </aside>
     );
 }

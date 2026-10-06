@@ -40,6 +40,7 @@ def init_db():
             predicted_class INTEGER NOT NULL,
             confidence REAL NOT NULL,
             afib_burden REAL, -- % of 2 s windows classified AFib
+            window_probs TEXT, -- JSON array: P(AFib) per 2 s window
             rr_variance REAL DEFAULT 0.0,
             rmssd REAL DEFAULT 0.0,
             r_peaks TEXT,     -- Stored as JSON string
@@ -48,9 +49,11 @@ def init_db():
         )
     """)
 
-    # Migrate databases created before afib_burden existed
-    if "afib_burden" not in [row["name"] for row in cursor.execute("PRAGMA table_info(scans)")]:
-        cursor.execute("ALTER TABLE scans ADD COLUMN afib_burden REAL")
+    # Migrate databases created before these columns existed
+    columns = [row["name"] for row in cursor.execute("PRAGMA table_info(scans)")]
+    for name, sql_type in (("afib_burden", "REAL"), ("window_probs", "TEXT")):
+        if name not in columns:
+            cursor.execute(f"ALTER TABLE scans ADD COLUMN {name} {sql_type}")
 
     # Create patient_pictures table
     cursor.execute("""
