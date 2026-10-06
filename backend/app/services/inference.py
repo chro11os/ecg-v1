@@ -6,7 +6,7 @@ import torch
 
 # Ensure root is in sys.path to import model.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from model import WINDOW, AFCNN_LSTM, afib_probabilities, burden_tier, compute_grad_cam, preprocess
+from model import WINDOW, AFCNN_LSTM, afib_probabilities, afib_windows, burden_tier, compute_grad_cam, preprocess
 from backend.app.config import DEVICE, WEIGHTS_PATH
 
 model = AFCNN_LSTM()
@@ -25,13 +25,14 @@ model.eval()
 
 def run_model_inference(raw_signal: np.ndarray) -> tuple[int, float, float, list[float], list[float]]:
     """
-    Classify every 2 s window of the signal as AFib / non-AFib and measure burden from those windows.
+    Classify every 2 s window of the signal as AFib / non-AFib (model.afib_windows post-processing)
+    and measure burden from those windows.
     Returns (tier, confidence, burden %, per-window P(AFib), Grad-CAM over the whole signal).
     """
     probs = afib_probabilities(model, raw_signal, DEVICE)
-    is_afib = probs >= 0.5
+    is_afib = afib_windows(probs)
     burden = float(is_afib.mean())
-    confidence = float(np.where(is_afib, probs, 1 - probs).mean())
+    confidence = float(np.where(probs >= 0.5, probs, 1 - probs).mean())
 
     # Grad-CAM per window for the class it was assigned, concatenated to match the signal length
     windows = preprocess(np.asarray(raw_signal, dtype=np.float64).reshape(-1, WINDOW))

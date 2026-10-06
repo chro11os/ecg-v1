@@ -1,9 +1,6 @@
-# PyTorch ROCm Nightly pre-releases
---extra-index-url https://download.pytorch.org/whl/nightly/rocm7.2
---pre
+# PyTorch for AMD ROCm (Linux)
+--extra-index-url https://download.pytorch.org/whl/rocm7.2
 torch
-torchvision
-torchaudio
 
 # Web server and API dependencies
 fastapi

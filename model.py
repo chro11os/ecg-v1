@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.ndimage
 import scipy.signal
 import torch
 import torch.nn as nn
@@ -68,6 +69,26 @@ def afib_probabilities(model, signal, device='cpu'):
     with torch.no_grad():
         logits = model(torch.from_numpy(x).unsqueeze(1).to(device))
     return torch.softmax(logits, dim=1)[:, 1].cpu().numpy()
+
+
+# Post-processing chosen on validation patients (lowest burden error); see README "Results"
+THRESHOLD = 0.6   # P(AFib) needed for a window to count
+SMOOTH = 5        # median filter over 5 windows (10 s): drops lone false positives, fills lone misses
+MIN_RUN = 10      # AFib must persist >= 10 windows (20 s) to count
+
+
+def afib_windows(probs, threshold=THRESHOLD, smooth=SMOOTH, min_run=MIN_RUN):
+    """
+    Boolean AFib mask over consecutive windows. Recordings longer than min_run windows get median
+    smoothing and the minimum-run rule; shorter strips (e.g. a 10 s upload) are only thresholded,
+    since a 5-window filter would collapse a 5-window strip into a single vote.
+    """
+    probs = np.asarray(probs)
+    if len(probs) <= min_run:
+        return probs >= threshold
+    hit = scipy.ndimage.median_filter(probs, size=smooth, mode='nearest') >= threshold
+    runs, _ = scipy.ndimage.label(hit)
+    return hit & (np.bincount(runs)[runs] >= min_run)  # label 0 is background, already False in hit
 
 
 def compute_grad_cam(model: nn.Module, x: torch.Tensor, class_idx: int):

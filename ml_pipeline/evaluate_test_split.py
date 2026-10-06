@@ -10,13 +10,14 @@ from sklearn.metrics import confusion_matrix
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ml_pipeline.dataset import load_cache, patient_split
 from ml_pipeline.train import DEVICE, WEIGHTS_PATH, evaluate, loader, window_datasets
-from model import AFCNN_LSTM, afib_probabilities, burden_tier
+from model import AFCNN_LSTM, afib_probabilities, afib_windows, burden_tier
 
 
 def evaluate_burden(model, test_records, seed=0):
     """
-    Slide the model over every 2 s of each test record and compare the measured AFib burden with the
-    annotated one. Uses every test record containing AFib plus an equal number of AFib-free records.
+    Slide the model over every 2 s of each test record, apply the post-processing in model.afib_windows,
+    and compare the measured AFib burden with the annotated one. Uses every test record containing AFib
+    plus an equal number of AFib-free records.
     """
     with_afib = sorted(p for p, m in test_records.items() if m['afib'])
     without = sorted(p for p, m in test_records.items() if not m['afib'])
@@ -27,7 +28,7 @@ def evaluate_burden(model, test_records, seed=0):
     for path in paths:
         meta = test_records[path]
         probs = afib_probabilities(model, wfdb.rdrecord(path).p_signal[:, 0], DEVICE)
-        pred_b.append(float((probs >= 0.5).mean()))
+        pred_b.append(float(afib_windows(probs).mean()))
         true_b.append(sum(e - s for s, e in meta['afib']) / meta['sig_len'])
 
     true_b, pred_b = np.array(true_b), np.array(pred_b)
